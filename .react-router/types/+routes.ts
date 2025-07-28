@@ -60,6 +60,11 @@ type Pages = {
   "/admin/books/new": {
     params: {};
   };
+  "/admin/books/:id/edit": {
+    params: {
+      "id": string;
+    };
+  };
   "/login": {
     params: {};
   };
@@ -71,7 +76,7 @@ type Pages = {
 type RouteFiles = {
   "root.tsx": {
     id: "root";
-    page: "/" | "/catalog" | "/book/:id" | "/news" | "/news/:id" | "/admin" | "/admin/users" | "/admin/users/new" | "/admin/users/:id/edit" | "/admin/news" | "/admin/news/new" | "/admin/news/:id/edit" | "/admin/books" | "/admin/books/new" | "/login" | "/sign-up";
+    page: "/" | "/catalog" | "/book/:id" | "/news" | "/news/:id" | "/admin" | "/admin/users" | "/admin/users/new" | "/admin/users/:id/edit" | "/admin/news" | "/admin/news/new" | "/admin/news/:id/edit" | "/admin/books" | "/admin/books/new" | "/admin/books/:id/edit" | "/login" | "/sign-up";
   };
   "./routes/layout.tsx": {
     id: "routes/layout";
@@ -99,7 +104,7 @@ type RouteFiles = {
   };
   "./routes/admin/layout.tsx": {
     id: "routes/admin/layout";
-    page: "/admin" | "/admin/users" | "/admin/users/new" | "/admin/users/:id/edit" | "/admin/news" | "/admin/news/new" | "/admin/news/:id/edit" | "/admin/books" | "/admin/books/new";
+    page: "/admin" | "/admin/users" | "/admin/users/new" | "/admin/users/:id/edit" | "/admin/news" | "/admin/news/new" | "/admin/news/:id/edit" | "/admin/books" | "/admin/books/new" | "/admin/books/:id/edit";
   };
   "routes/admin/index.tsx": {
     id: "routes/admin/index";
@@ -136,6 +141,10 @@ type RouteFiles = {
   "./routes/admin/books/new.tsx": {
     id: "routes/admin/books/new";
     page: "/admin/books/new";
+  };
+  "./routes/admin/books/edit.tsx": {
+    id: "routes/admin/books/edit";
+    page: "/admin/books/:id/edit";
   };
   "./routes/login.tsx": {
     id: "routes/login";
