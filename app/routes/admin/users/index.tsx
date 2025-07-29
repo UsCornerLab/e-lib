@@ -1,5 +1,6 @@
 
 import { useState } from "react"
+import { Link } from "react-router"
 import { Search, Filter, MoreHorizontal, Edit, Trash2, Shield, UserCheck, UserX } from "lucide-react"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
@@ -195,44 +196,48 @@ export default function UsersManagement() {
                     </TableCell>
                     <TableCell>{user.booksCheckedOut}</TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Profile
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Shield className="mr-2 h-4 w-4" />
-                            Change Role
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleStatusToggle(user.id)}>
-                            {user.status === "active" ? (
-                              <>
-                                <UserX className="mr-2 h-4 w-4" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="mr-2 h-4 w-4" />
-                                Activate
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Account
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="ghost" className="h-8 w-8 p-0">
+        <span className="sr-only">Open menu</span>
+        <MoreHorizontal className="h-4 w-4" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end">
+      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+      <DropdownMenuItem asChild>
+        <Link to={`/admin/users/${user.id}/edit`}>
+          <Edit className="mr-2 h-4 w-4" />
+          Edit Profile
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to={`/admin/users/${user.id}/role`}>
+          <Shield className="mr-2 h-4 w-4" />
+          Change Role
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => handleStatusToggle(user.id)}>
+        {user.status === "active" ? (
+          <>
+            <UserX className="mr-2 h-4 w-4" />
+            Deactivate
+          </>
+        ) : (
+          <>
+            <UserCheck className="mr-2 h-4 w-4" />
+            Activate
+          </>
+        )}
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user.id)}>
+        <Trash2 className="mr-2 h-4 w-4" />
+        Delete Account
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

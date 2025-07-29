@@ -6,7 +6,6 @@ import { AdminSidebar } from "~/components/admin/admin-sidebar"
 import { SidebarProvider, SidebarInset } from "~/components/ui/sidebar"
 import { AdminHeader } from "~/components/admin/admin-header"
 import { Outlet } from "react-router"
-
 export default function AdminLayout({
   children,
 }: {
@@ -20,7 +19,9 @@ export default function AdminLayout({
       <AdminSidebar userRole={userRole} />
       <SidebarInset>
         <AdminHeader />
-        <main className="flex-1 p-6"><Outlet /></main>
+        <main className="flex-1 p-6">
+          <Outlet />
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )

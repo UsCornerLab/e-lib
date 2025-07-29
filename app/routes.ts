@@ -23,6 +23,8 @@ export default [
     route("news/:id/edit", "./routes/admin/news/edit.tsx"),
     route("books", "./routes/admin/books/index.tsx"),
     route("books/new", "./routes/admin/books/new.tsx"),
+    route("books/:id/edit", "./routes/admin/books/edit.tsx"),
+
   ]),
   route("login", "./routes/login.tsx"),
   route("sign-up", "./routes/sign-up.tsx"),
