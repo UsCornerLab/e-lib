@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router"
-import { ArrowLeft, Upload, Save, Trash2 } from "lucide-react"
+import { ArrowLeft, Upload, Save, Trash2, X } from "lucide-react"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
@@ -12,8 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Separator } from "~/components/ui/separator"
 import { Badge } from "~/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs"
+import { Checkbox } from "~/components/ui/checkbox"
 import { Link } from "react-router"
 
 export default function EditBook() {
@@ -21,56 +20,34 @@ export default function EditBook() {
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [coverImage, setCoverImage] = useState<File | null>(null)
-
-  // Mock book data - in real app, this would be fetched from API
+  const [genres, setGenres] = useState<string[]>([])
+  const [authors, setAuthors] = useState<string[]>([])
+  const [newAuthorInput, setNewAuthorInput] = useState("")
+  // Mock data - in a real app, this would be fetched from API based on the id
   const [formData, setFormData] = useState({
-    title: "The Midnight Library",
-    author: "Matt Haig",
-    isbn: "9780525559474",
-    publicationYear: "2020",
-    genre: "Fiction",
-    publisher: "Viking",
-    language: "English",
-    pageCount: 304,
-    status: "available",
-    location: "Main Library - Fiction Section",
-    notes: "Popular title, high demand",
-    acquisitionDate: "2021-03-15",
-    lastCheckedOut: "2023-06-01",
-    totalCheckouts: 12,
-    copiesAvailable: 3,
-    totalCopies: 5,
+    title: "kill",
+    isbn: "9788417563114",
+    publisher: "Aster Nega",
+    publication_date: "2024-08-15",
+    accession_number: "4402298",
+    category: "Psychology",
+    from_org_name: "USA",
+    from_type: "Donated",
+    shelf_name: "Psychology",
+    shelf_number: "85",
+    added_by: "3",
+    copies: 4
   })
 
-  const [availability, setAvailability] = useState({
-    canBeBorrowed: true,
-    canBeReserved: true,
-    availableDigitally: false,
-  })
+  const availableGenres = ["fantasy", "social", "science", "history", "biography"]
+  const availableFromTypes = ["Donated", "Purchased", "Gifted"]
 
-  const [circulationHistory] = useState([
-    { date: "2023-06-01", action: "Checked out", user: "John Smith" },
-    { date: "2023-05-28", action: "Returned", user: "Jane Doe" },
-    { date: "2023-05-25", action: "Reserved", user: "Alice Johnson" },
-    { date: "2023-05-20", action: "Checked out", user: "Bob Wilson" },
-  ])
-
-  const genres = [
-    { value: "fiction", label: "Fiction" },
-    { value: "non-fiction", label: "Non-Fiction" },
-    { value: "mystery", label: "Mystery" },
-    { value: "sci-fi", label: "Science Fiction" },
-    { value: "fantasy", label: "Fantasy" },
-    { value: "biography", label: "Biography" },
-    { value: "history", label: "History" },
-  ]
-
-  const handleInputChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleAvailabilityChange = (key: string, checked: boolean) => {
-    setAvailability((prev) => ({ ...prev, [key]: checked }))
+  const handleGenreToggle = (genre: string) => {
+    setGenres((prev) => (prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]))
   }
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,6 +56,24 @@ export default function EditBook() {
       setCoverImage(file)
     }
   }
+
+ const handleAddAuthors = () => {
+  if (!newAuthorInput.trim()) return
+  
+  const authorsToAdd = newAuthorInput.split(',')
+    .map(author => author.trim())
+    .filter(author => author.length > 0 && !authors.includes(author))
+  
+  if (authorsToAdd.length > 0) {
+    setAuthors([...authors, ...authorsToAdd])
+    setNewAuthorInput("")
+  }
+}
+
+const handleRemoveAuthor = (authorToRemove: string) => {
+  setAuthors(authors.filter(author => author !== authorToRemove))
+}
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -89,8 +84,9 @@ export default function EditBook() {
 
     console.log("Updated book data:", {
       ...formData,
-      availability,
-      coverImage: coverImage?.name,
+      genre: genres,
+      author: authors,
+      cover_image: coverImage?.name,
     })
 
     setIsSubmitting(false)
@@ -130,168 +126,259 @@ export default function EditBook() {
         </div>
       </div>
 
-      <Tabs defaultValue="details" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="availability">Availability</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-        </TabsList>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Information</CardTitle>
+                <CardDescription>Edit the basic details of the book</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title *</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => handleInputChange("title", e.target.value)}
+                    required
+                  />
+                </div>
 
-        <TabsContent value="details">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Book Information</CardTitle>
-                    <CardDescription>Update book details and metadata</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Title</Label>
-                      <Input
-                        id="title"
-                        value={formData.title}
-                        onChange={(e) => handleInputChange("title", e.target.value)}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="isbn">ISBN</Label>
+                    <Input
+                      id="isbn"
+                      value={formData.isbn}
+                      onChange={(e) => handleInputChange("isbn", e.target.value)}
+                      placeholder="9788417563114"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="publication_date">Publication Date</Label>
+                    <Input
+                      id="publication_date"
+                      type="date"
+                      value={formData.publication_date}
+                      onChange={(e) => handleInputChange("publication_date", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="publisher">Publisher</Label>
+                    <Input
+                      id="publisher"
+                      value={formData.publisher}
+                      onChange={(e) => handleInputChange("publisher", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Input
+                      id="category"
+                      value={formData.category}
+                      onChange={(e) => handleInputChange("category", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="accession_number">Accession Number</Label>
+                    <Input
+                      id="accession_number"
+                      value={formData.accession_number}
+                      onChange={(e) => handleInputChange("accession_number", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="copies">Copies</Label>
+                    <Input
+                      id="copies"
+                      type="number"
+                      value={formData.copies}
+                      onChange={(e) => handleInputChange("copies", Number(e.target.value))}
+                      min="1"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+  <CardHeader>
+    <CardTitle>Authors</CardTitle>
+    <CardDescription>Edit authors for this book</CardDescription>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="flex gap-2">
+      <Input
+        value={newAuthorInput}
+        onChange={(e) => setNewAuthorInput(e.target.value)}
+        placeholder="Enter author names, separated by commas"
+        onKeyDown={(e) => e.key === 'Enter' && handleAddAuthors()}
+      />
+      <Button type="button" onClick={handleAddAuthors}>
+        Add
+      </Button>
+    </div>
+    {authors.length > 0 && (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {authors.map((author) => (
+          <Badge key={author} variant="secondary" className="flex items-center gap-1">
+            {author}
+            <button
+              type="button"
+              onClick={() => handleRemoveAuthor(author)}
+              className="rounded-full hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+      </div>
+    )}
+  </CardContent>
+</Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Genres</CardTitle>
+                <CardDescription>Edit the genres for this book</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {availableGenres.map((genre) => (
+                      <div key={genre} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={genre}
+                          checked={genres.includes(genre)}
+                          onCheckedChange={() => handleGenreToggle(genre)}
+                        />
+                        <Label htmlFor={genre} className="capitalize">
+                          {genre}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {genres.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {genres.map((genre) => (
+                        <Badge key={genre} variant="secondary">
+                          {genre}
+                          <button
+                            type="button"
+                            onClick={() => handleGenreToggle(genre)}
+                            className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Acquisition Details</CardTitle>
+                <CardDescription>Edit how this book was obtained</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="from_org_name">Source Organization</Label>
+                    <Input
+                      id="from_org_name"
+                      value={formData.from_org_name}
+                      onChange={(e) => handleInputChange("from_org_name", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="from_type">Acquisition Type</Label>
+                    <Select value={formData.from_type} onValueChange={(value) => handleInputChange("from_type", value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableFromTypes.map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Shelf Information</CardTitle>
+                <CardDescription>Edit where this book is located</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="shelf_name">Shelf Name</Label>
+                    <Input
+                      id="shelf_name"
+                      value={formData.shelf_name}
+                      onChange={(e) => handleInputChange("shelf_name", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="shelf_number">Shelf Number</Label>
+                    <Input
+                      id="shelf_number"
+                      value={formData.shelf_number}
+                      onChange={(e) => handleInputChange("shelf_number", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cover Image</CardTitle>
+                <CardDescription>Update the cover image for the book</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {coverImage ? (
+                    <div className="relative">
+                      <img
+                        src={URL.createObjectURL(coverImage) || "/placeholder.svg"}
+                        alt="Book cover preview"
+                        className="w-full aspect-[2/3] object-cover rounded-lg"
                       />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => setCoverImage(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="author">Author</Label>
-                        <Input
-                          id="author"
-                          value={formData.author}
-                          onChange={(e) => handleInputChange("author", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="isbn">ISBN</Label>
-                        <Input
-                          id="isbn"
-                          value={formData.isbn}
-                          onChange={(e) => handleInputChange("isbn", e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="publicationYear">Publication Year</Label>
-                        <Input
-                          id="publicationYear"
-                          value={formData.publicationYear}
-                          onChange={(e) => handleInputChange("publicationYear", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="genre">Genre</Label>
-                        <Select
-                          value={formData.genre}
-                          onValueChange={(value) => handleInputChange("genre", value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {genres.map((genre) => (
-                              <SelectItem key={genre.value} value={genre.value}>
-                                {genre.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="publisher">Publisher</Label>
-                        <Input
-                          id="publisher"
-                          value={formData.publisher}
-                          onChange={(e) => handleInputChange("publisher", e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="language">Language</Label>
-                        <Input
-                          id="language"
-                          value={formData.language}
-                          onChange={(e) => handleInputChange("language", e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="pageCount">Page Count</Label>
-                      <Input
-                        id="pageCount"
-                        type="number"
-                        value={formData.pageCount}
-                        onChange={(e) => handleInputChange("pageCount", e.target.value)}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Library Information</CardTitle>
-                    <CardDescription>Book status and library details</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Acquisition Date</Label>
-                        <Input value={formData.acquisitionDate} disabled />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Last Checked Out</Label>
-                        <Input value={formData.lastCheckedOut} disabled />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Total Checkouts</Label>
-                        <Input value={formData.totalCheckouts} disabled />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Copies Available</Label>
-                        <Input value={formData.copiesAvailable} disabled />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Book Cover</CardTitle>
-                    <CardDescription>Update book cover image</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex justify-center">
-                        <Avatar className="h-24 w-24">
-                          <AvatarImage
-                            src={coverImage ? URL.createObjectURL(coverImage) : "/placeholder.svg"}
-                            alt="Book Cover"
-                          />
-                          <AvatarFallback>{formData.title.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                      </div>
-
-                      <div className="text-center">
+                  ) : (
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                      <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
+                      <div className="mt-4">
                         <Label htmlFor="cover-upload" className="cursor-pointer">
-                          <Button type="button" variant="outline" asChild>
-                            <span>
-                              <Upload className="mr-2 h-4 w-4" />
-                              Upload New Cover
-                            </span>
-                          </Button>
+                          <span className="text-sm font-medium text-primary hover:text-primary/80">
+                            Click to upload
+                          </span>
+                          <span className="text-sm text-muted-foreground"> or drag and drop</span>
                         </Label>
                         <Input
                           id="cover-upload"
@@ -301,121 +388,25 @@ export default function EditBook() {
                           className="hidden"
                         />
                       </div>
+                      <p className="text-xs text-muted-foreground mt-2">PNG, JPG up to 10MB</p>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Book Settings</CardTitle>
-                    <CardDescription>Status and location configuration</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Book Status</Label>
-                      <Select
-                        value={formData.status}
-                        onValueChange={(value) => handleInputChange("status", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="available">Available</SelectItem>
-                          <SelectItem value="checked-out">Checked Out</SelectItem>
-                          <SelectItem value="reserved">Reserved</SelectItem>
-                          <SelectItem value="unavailable">Unavailable</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location</Label>
-                      <Input
-                        id="location"
-                        value={formData.location}
-                        onChange={(e) => handleInputChange("location", e.target.value)}
-                      />
-                    </div>
-
-                    <Separator />
-
-                    <div className="space-y-2">
-                      <Label htmlFor="notes">Admin Notes</Label>
-                      <Textarea
-                        id="notes"
-                        value={formData.notes}
-                        onChange={(e) => handleInputChange("notes", e.target.value)}
-                        rows={3}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {isSubmitting ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </div>
-          </form>
-        </TabsContent>
-
-        <TabsContent value="availability">
-          <Card>
-            <CardHeader>
-              <CardTitle>Book Availability</CardTitle>
-              <CardDescription>Manage book borrowing and access settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(availability).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <Label htmlFor={key} className="capitalize font-medium">
-                        {key.replace(/([A-Z])/g, " $1").toLowerCase()}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {key === "canBeBorrowed" && "Allow physical borrowing of this book"}
-                        {key === "canBeReserved" && "Allow users to place holds on this book"}
-                        {key === "availableDigitally" && "Available as an e-book or digital resource"}
-                      </p>
-                    </div>
-                    
-                  </div>
-                ))}
-              </div>
-              <Button onClick={() => console.log("Save availability:", availability)}>
-                Save Availability
+            <div className="flex flex-col gap-2">
+              <Button type="submit" disabled={isSubmitting}>
+                <Save className="mr-2 h-4 w-4" />
+                {isSubmitting ? "Saving Changes..." : "Save Changes"}
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle>Circulation History</CardTitle>
-              <CardDescription>Recent borrowing and reservation activity</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {circulationHistory.map((history, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">
-                        {history.action} by {history.user}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{history.date}</p>
-                    </div>
-                    <Badge variant="outline">{history.action}</Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              <Button type="button" variant="outline" asChild>
+                <Link to="/admin/books">Cancel</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </form>
     </div>
   )
 }

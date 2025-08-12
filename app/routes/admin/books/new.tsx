@@ -1,4 +1,3 @@
-
 import type React from "react"
 import { useState } from "react"
 import { useNavigate } from "react-router"
@@ -17,46 +16,58 @@ export default function NewBook() {
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [coverImage, setCoverImage] = useState<File | null>(null)
-  const [subjects, setSubjects] = useState<string[]>([])
-  const [formats, setFormats] = useState<string[]>(["print"])
-
+  const [genres, setGenres] = useState<string[]>([])
+  const [authors, setAuthors] = useState<string[]>([])
+  const [newAuthorInput, setNewAuthorInput] = useState("")
   const [formData, setFormData] = useState({
     title: "",
-    author: "",
     isbn: "",
-    year: new Date().getFullYear(),
-    description: "",
-    pages: "",
     publisher: "",
-    language: "English",
+    publication_date: new Date().toISOString().split('T')[0],
+    accession_number: "",
+    category: "",
+    from_org_name: "",
+    from_type: "Donated",
+    shelf_name: "",
+    shelf_number: "",
+    added_by: "",
+    copies: 1
   })
 
-  const availableSubjects = [
-    "fiction",
-    "nonfiction",
-    "mystery",
-    "scifi",
+  const availableGenres = [
     "fantasy",
-    "romance",
-    "biography",
-    "history",
+    "social",
     "science",
-    "philosophy",
+    "history",
+    "biography"
   ]
 
-  const availableFormats = ["print", "ebook", "audiobook"]
+  const availableFromTypes = ["Donated", "Purchased", "Gifted"]
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubjectToggle = (subject: string) => {
-    setSubjects((prev) => (prev.includes(subject) ? prev.filter((s) => s !== subject) : [...prev, subject]))
+  const handleGenreToggle = (genre: string) => {
+    setGenres((prev) => (prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]))
   }
 
-  const handleFormatToggle = (format: string) => {
-    setFormats((prev) => (prev.includes(format) ? prev.filter((f) => f !== format) : [...prev, format]))
+  const handleAddAuthors = () => {
+  if (!newAuthorInput.trim()) return
+  
+  const authorsToAdd = newAuthorInput.split(',')
+    .map(author => author.trim())
+    .filter(author => author.length > 0 && !authors.includes(author))
+  
+  if (authorsToAdd.length > 0) {
+    setAuthors([...authors, ...authorsToAdd])
+    setNewAuthorInput("")
   }
+}
+
+const handleRemoveAuthor = (authorToRemove: string) => {
+  setAuthors(authors.filter(author => author !== authorToRemove))
+}
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -74,9 +85,9 @@ export default function NewBook() {
 
     console.log("New book data:", {
       ...formData,
-      subjects,
-      formats,
-      coverImage: coverImage?.name,
+      genre: genres,
+      author: authors,
+      cover_image: coverImage?.name,
     })
 
     setIsSubmitting(false)
@@ -107,56 +118,33 @@ export default function NewBook() {
                 <CardDescription>Enter the basic details of the book</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title *</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => handleInputChange("title", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="author">Author *</Label>
-                    <Input
-                      id="author"
-                      value={formData.author}
-                      onChange={(e) => handleInputChange("author", e.target.value)}
-                      required
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title *</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => handleInputChange("title", e.target.value)}
+                    required
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="isbn">ISBN</Label>
                     <Input
                       id="isbn"
                       value={formData.isbn}
                       onChange={(e) => handleInputChange("isbn", e.target.value)}
-                      placeholder="978-0-123456-78-9"
+                      placeholder="9788417563114"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="year">Publication Year</Label>
+                    <Label htmlFor="publication_date">Publication Date</Label>
                     <Input
-                      id="year"
-                      type="number"
-                      value={formData.year}
-                      onChange={(e) => handleInputChange("year", Number.parseInt(e.target.value))}
-                      min="1000"
-                      max={new Date().getFullYear() + 1}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pages">Pages</Label>
-                    <Input
-                      id="pages"
-                      type="number"
-                      value={formData.pages}
-                      onChange={(e) => handleInputChange("pages", e.target.value)}
-                      min="1"
+                      id="publication_date"
+                      type="date"
+                      value={formData.publication_date}
+                      onChange={(e) => handleInputChange("publication_date", e.target.value)}
                     />
                   </div>
                 </div>
@@ -171,65 +159,102 @@ export default function NewBook() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="language">Language</Label>
-                    <Select value={formData.language} onValueChange={(value) => handleInputChange("language", value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="English">English</SelectItem>
-                        <SelectItem value="Spanish">Spanish</SelectItem>
-                        <SelectItem value="French">French</SelectItem>
-                        <SelectItem value="German">German</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="category">Category</Label>
+                    <Input
+                      id="category"
+                      value={formData.category}
+                      onChange={(e) => handleInputChange("category", e.target.value)}
+                    />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => handleInputChange("description", e.target.value)}
-                    rows={4}
-                    placeholder="Enter a brief description of the book..."
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="accession_number">Accession Number</Label>
+                    <Input
+                      id="accession_number"
+                      value={formData.accession_number}
+                      onChange={(e) => handleInputChange("accession_number", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="copies">Copies</Label>
+                    <Input
+                      id="copies"
+                      type="number"
+                      value={formData.copies}
+                      onChange={(e) => handleInputChange("copies", Number(e.target.value))}
+                      min="1"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
+  <CardHeader>
+    <CardTitle>Authors</CardTitle>
+    <CardDescription>Add authors for this book</CardDescription>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="flex gap-2">
+      <Input
+        value={newAuthorInput}
+        onChange={(e) => setNewAuthorInput(e.target.value)}
+        placeholder="Enter author names, separated by commas"
+        onKeyDown={(e) => e.key === 'Enter' && handleAddAuthors()}
+      />
+      <Button type="button" onClick={handleAddAuthors}>
+        Add
+      </Button>
+    </div>
+    {authors.length > 0 && (
+      <div className="flex flex-wrap gap-2 mt-2">
+        {authors.map((author) => (
+          <Badge key={author} variant="secondary" className="flex items-center gap-1">
+            {author}
+            <button
+              type="button"
+              onClick={() => handleRemoveAuthor(author)}
+              className="rounded-full hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+      </div>
+    )}
+  </CardContent>
+</Card>
+            <Card>
               <CardHeader>
-                <CardTitle>Categories & Formats</CardTitle>
-                <CardDescription>Select the subjects and available formats</CardDescription>
+                <CardTitle>Genres</CardTitle>
+                <CardDescription>Select the genres for this book</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Subjects</Label>
                   <div className="flex flex-wrap gap-2">
-                    {availableSubjects.map((subject) => (
-                      <div key={subject} className="flex items-center space-x-2">
+                    {availableGenres.map((genre) => (
+                      <div key={genre} className="flex items-center space-x-2">
                         <Checkbox
-                          id={subject}
-                          checked={subjects.includes(subject)}
-                          onCheckedChange={() => handleSubjectToggle(subject)}
+                          id={genre}
+                          checked={genres.includes(genre)}
+                          onCheckedChange={() => handleGenreToggle(genre)}
                         />
-                        <Label htmlFor={subject} className="capitalize">
-                          {subject}
+                        <Label htmlFor={genre} className="capitalize">
+                          {genre}
                         </Label>
                       </div>
                     ))}
                   </div>
-                  {subjects.length > 0 && (
+                  {genres.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {subjects.map((subject) => (
-                        <Badge key={subject} variant="secondary">
-                          {subject}
+                      {genres.map((genre) => (
+                        <Badge key={genre} variant="secondary">
+                          {genre}
                           <button
                             type="button"
-                            onClick={() => handleSubjectToggle(subject)}
+                            onClick={() => handleGenreToggle(genre)}
                             className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
                           >
                             <X className="h-3 w-3" />
@@ -239,22 +264,63 @@ export default function NewBook() {
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="space-y-2">
-                  <Label>Available Formats</Label>
-                  <div className="flex flex-wrap gap-4">
-                    {availableFormats.map((format) => (
-                      <div key={format} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={format}
-                          checked={formats.includes(format)}
-                          onCheckedChange={() => handleFormatToggle(format)}
-                        />
-                        <Label htmlFor={format} className="capitalize">
-                          {format}
-                        </Label>
-                      </div>
-                    ))}
+            <Card>
+              <CardHeader>
+                <CardTitle>Acquisition Details</CardTitle>
+                <CardDescription>How this book was obtained</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="from_org_name">Source Organization</Label>
+                    <Input
+                      id="from_org_name"
+                      value={formData.from_org_name}
+                      onChange={(e) => handleInputChange("from_org_name", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="from_type">Acquisition Type</Label>
+                    <Select value={formData.from_type} onValueChange={(value) => handleInputChange("from_type", value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableFromTypes.map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Shelf Information</CardTitle>
+                <CardDescription>Where this book is located</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="shelf_name">Shelf Name</Label>
+                    <Input
+                      id="shelf_name"
+                      value={formData.shelf_name}
+                      onChange={(e) => handleInputChange("shelf_name", e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="shelf_number">Shelf Number</Label>
+                    <Input
+                      id="shelf_number"
+                      value={formData.shelf_number}
+                      onChange={(e) => handleInputChange("shelf_number", e.target.value)}
+                    />
                   </div>
                 </div>
               </CardContent>
