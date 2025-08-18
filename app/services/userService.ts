@@ -1,53 +1,118 @@
+// services/userService.ts
+export interface Role {
+  id: number;
+  role_type: string;
+}
+
 export interface User {
-  id: number
-  username: string
-  email: string
-  active: boolean
-  
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  birthDate: string;
+  role_id: number;
+  address: string;
+  id_photo_path: string;
+  profile: string;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
+  role: Role;
 }
 
-export async function fetchUsers(): Promise<User[]> {
-  const res = await fetch("http://127.0.0.1:8000/api/users", {
-    headers: {
-      "Content-Type": "application/json",
-      
-    },
-  })
-  if (!res.ok) throw new Error("Failed to fetch users")
-  return res.json()
+export interface UsersResponse {
+  status: boolean;
+  users: User[];
 }
 
-export async function editUser(userId: number, updatedData: Partial<User>): Promise<User> {
-  const res = await fetch(`http://127.0.0.1:8000/api/users/${userId}`, {
+const API_BASE = "http://127.0.0.1:8000/api/users";
+const API_BASE2 =  "http://127.0.0.1:8000/api/updateProfile"
+
+// Helper to build headers with JWT
+const buildHeaders = (token: string) => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${token}`,
+});
+
+export async function listUsers(token: string): Promise<User[]> {
+  const res = await fetch(API_BASE, {
+    headers: buildHeaders(token),
+  });
+  const data: UsersResponse = await res.json();
+  if (!data.status) throw new Error("Failed to fetch users");
+  return data.users;
+}
+
+export interface CreateUserPayload {
+  first_name: string;
+  last_name: string;
+  email: string;
+  birthDate: string;
+  address: string;
+  role_id: number;
+  password: string;
+}
+
+export async function createUser(payload: CreateUserPayload, token: string): Promise<User> {
+  const res = await fetch(API_BASE, {
+    method: "POST",
+    headers: buildHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!data.status) throw new Error("Failed to create user");
+  return data.user;
+}
+
+export interface EditUserPayload {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  birthDate?: string;
+  address?: string;
+  role_id?: number;
+  verified?: boolean;
+  profile?: File;       
+  id_photo_path?: File
+}
+
+export async function editUser(id: number, payload: EditUserPayload, token: string): Promise<User> {
+  const res = await fetch(`${API_BASE2}/${id}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(updatedData),
-  })
-  if (!res.ok) throw new Error("Failed to edit user")
-  return res.json()
+    headers: buildHeaders(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!data.status) throw new Error("Failed to update user");
+  return data.user;
 }
 
-export async function deleteUser(userId: number): Promise<void> {
-  const res = await fetch(`http://127.0.0.1:8000/api/users/${userId}`, {
+export function updateUserRole(
+  id: number,
+  role_id: number,
+  token: string
+): Promise<User> {
+  console.log(`Updating role for user ${id} to ${role_id}`);
+  return editUser(id, { role_id }, token);
+}
+
+// Update active/deactivated status only
+export function updateUserStatus(
+  id: number,
+  verified: boolean,
+  token: string
+): Promise<User> {
+  return editUser(id, { verified }, token);
+}
+
+
+
+export async function deleteUser(id: number, token: string): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/${id}`, {
     method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  })
-  if (!res.ok) throw new Error("Failed to delete user")
-}
-
-export async function deactivateUser(userId: number): Promise<User> {
-  
-  const res = await fetch(`http://127.0.0.1:8000/api/users/${userId}`, {
-    method: "PATCH", 
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ active: false }),
-  })
-  if (!res.ok) throw new Error("Failed to deactivate user")
-  return res.json()
+    headers: buildHeaders(token),
+  });
+  const data = await res.json();
+  if (!data.status) throw new Error("Failed to delete user");
+  return true;
 }

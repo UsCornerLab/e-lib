@@ -1,108 +1,149 @@
-export interface BookPayload {
-  id?: number;
-  title: string;
-  ISBN: string;
-  publisher: string;
-  publication_date: string;
-  authors: { author_name: string }[];  
-  genres: { genre_name: string }[];    
-  cover_image?: File | null;
-  accession_number?: string;
-  category?: { id: number; category_name: string };  
-  from_org_name?: string;
-  from_type?: string;
-  shelf_name?: string;
-  shelf_number?: number;
-  added_by?: { id: number; first_name: string; last_name: string; email: string }; 
-  status?: string;
-  available_copies?: number;
-  copies?: number;
-}
+import axios from "axios"
 
-
-const API_BASE_URL = "http://localhost:8000/api/books";
-
-// Convert payload to FormData
-function toFormData(payload: BookPayload): FormData {
-  const formData = new FormData();
-  Object.entries(payload).forEach(([key, value]) => {
-    if (Array.isArray(value)) {
-      value.forEach(v => formData.append(`${key}[]`, v));
-    } else if (value !== undefined && value !== null) {
-      formData.append(key, value as any);
-    }
-  });
-  return formData;
-}
-
-// Always attach token if available
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem("token");
-  const headers: HeadersInit = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+// ====================
+// Interfaces
+// ====================
+export interface Book {
+  id: number
+  title: string
+  ISBN: string
+  publisher: string
+  publication_date: string
+  cover_image_path: string | null
+  accession_number: number
+  copies: number
+  available_copies: number
+  category_id: number
+  added_by: {
+    id: number
+    first_name: string
+    last_name: string
+    email: string
+    birthDate: string
+    role_id: number
+    address: string
+    id_photo_path: string
+    profile: string
+    verified: boolean
+    created_at: string
+    updated_at: string
   }
-  return headers;
+  status: string
+  from: number
+  active: number
+  created_at: string
+  updated_at: string
+  author: { author_name: string; pivot: { book_id: number; author_id: number } }[]
+  genre: { genre_name: string; pivot: { book_id: number; genre_id: number } }[]
+  category: { id: number; category_name: string }
+  shelf: { id: number; book_id: number; shelf_name: string; shelf_number: number }
+  origin: { id: number; org_name: string; type: string }
 }
 
-// CREATE
-export async function createBook(payload: BookPayload) {
-  const formData = toFormData(payload);
-
-  const res = await fetch(`${API_BASE_URL}/countBook/`, {
-    method: "POST",
-    headers: getAuthHeaders(),
-    body: formData,
-  });
-
-  if (!res.ok) throw new Error(`Failed to create book: ${res.statusText}`);
-  return await res.json().catch(() => null);
+export interface BookResponse {
+  status: boolean
+  message: string
+  books?: Book[]
+  book?: Book
 }
 
-// READ ALL (Always return an array)
-export async function getBooks(): Promise<BookPayload[]> {
-  const res = await fetch(`${API_BASE_URL}/`, {
-    headers: getAuthHeaders(),
-  });
+// ====================
+// Payload for create/update
+// ====================
+export type BookPayload = Omit<
+  Book,
+  "id" | "created_at" | "updated_at" | "added_by" | "status" | "from" | "active"
+>
 
-  if (!res.ok) throw new Error(`Failed to fetch books: ${res.statusText}`);
+// ====================
+// API Setup
+// ====================
+const API_URL = "http://127.0.0.1:8000/api"
 
-  const json = await res.json();
-  if (Array.isArray(json)) return json;
-  if (Array.isArray(json.books)) return json.books;
-  return [];
-}
+// ====================
+// Services
+// ====================
+export const bookServices = {
+  // Get all books
+  getBooks: async (token: string): Promise<Book[]> => {
+    try {
+      const response = await axios.get<BookResponse>(`${API_URL}/books`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.data.status) {
+        throw new Error(response.data.message || "Failed to fetch books")
+      }
+      return response.data.books || []
+    } catch (error) {
+      console.error("Error fetching books:", error)
+      throw error
+    }
+  },
 
-// READ ONE
-export async function getBook(id: number): Promise<BookPayload> {
-  const res = await fetch(`${API_BASE_URL}/${id}`, {
-    headers: getAuthHeaders(),
-  });
+  // Get a single book by ID
+  getBookById: async (id: number, token: string): Promise<Book> => {
+    try {
+      const response = await axios.get<BookResponse>(`${API_URL}/books/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.data.status || !response.data.book) {
+        throw new Error(response.data.message || "Book not found")
+      }
+      return response.data.book
+    } catch (error) {
+      console.error(`Error fetching book ${id}:`, error)
+      throw error
+    }
+  },
 
-  if (!res.ok) throw new Error(`Failed to fetch book ${id}: ${res.statusText}`);
-  return await res.json();
-}
+  createBook: async (bookData: BookPayload, token: string): Promise<Book> => {
+    try {
+      console.log("Sending POST request to:", `${API_URL}/books`, "with data:", bookData, "token:", token);
+      const response = await axios.post<BookResponse>(`${API_URL}/books`, bookData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log("API response for createBook:", response.data);
+      if (!response.data.status || !response.data.book) {
+        throw new Error(response.data.message || 'Failed to create book');
+      }
+      return response.data.book;
+    } catch (error: any) {
+      console.error("Error in createBook:", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      });
+      throw new Error(error.response?.data?.message || error.message || 'Failed to create book');
+    }
+  },
+  // Update a book
+  updateBook: async (id: number, bookData: BookPayload, token: string): Promise<Book> => {
+    try {
+      const response = await axios.put<BookResponse>(`${API_URL}/books/${id}`, bookData, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.data.status || !response.data.book) {
+        throw new Error(response.data.message || "Failed to update book")
+      }
+      return response.data.book
+    } catch (error) {
+      console.error(`Error updating book ${id}:`, error)
+      throw error
+    }
+  },
 
-// UPDATE
-export async function updateBook(id: number, payload: BookPayload) {
-  const formData = toFormData(payload);
-
-  const res = await fetch(`${API_BASE_URL}/${id}/`, {
-    method: "PUT",
-    headers: getAuthHeaders(),
-    body: formData,
-  });
-
-  if (!res.ok) throw new Error(`Failed to update book ${id}: ${res.statusText}`);
-  return await res.json();
-}
-
-// DELETE
-export async function deleteBook(id: number) {
-  const res = await fetch(`${API_BASE_URL}/${id}`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  });
-
-  if (!res.ok) throw new Error(`Failed to delete book ${id}: ${res.statusText}`);
+  // Delete a book
+  deleteBook: async (id: number, token: string): Promise<void> => {
+    try {
+      const response = await axios.delete<BookResponse>(`${API_URL}/books/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!response.data.status) {
+        throw new Error(response.data.message || "Failed to delete book")
+      }
+    } catch (error) {
+      console.error(`Error deleting book ${id}:`, error)
+      throw error
+    }
+  },
 }

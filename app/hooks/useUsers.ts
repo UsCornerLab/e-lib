@@ -1,74 +1,135 @@
-import { useState, useCallback } from "react"
-import * as userService from "~/services/userService"
+import { useState, useCallback, useEffect } from "react";
+import {
+  listUsers,
+  createUser,
+  editUser,
+
+  deleteUser,
+  type User,
+  type CreateUserPayload,
+  type EditUserPayload,
+} from "../services/userService";
 
 export function useUsers() {
-  const [users, setUsers] = useState<userService.User[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string>("");
 
+  // Load token from localStorage on client side
+  useEffect(() => {
+    const t = localStorage.getItem("token") || "";
+    setToken(t);
+  }, []);
+
+  // Fetch all users
   const fetchUsers = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+    if (!token) return;
+    setLoading(true);
+    setError(null);
     try {
-      const data = await userService.fetchUsers()
-      setUsers(data)
+      const data = await listUsers(token);
+      setUsers(data);
     } catch (err: any) {
-      setError(err.message || "Error fetching users")
+      setError(err.message || "Failed to fetch users");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, [token]);
 
-  const editUser = useCallback(async (userId: number, updatedData: Partial<userService.User>) => {
-    setLoading(true)
-    setError(null)
+  const addUser = useCallback(
+    async (payload: CreateUserPayload) => {
+      if (!token) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const newUser = await createUser(payload, token);
+        setUsers((prev) => [...prev, newUser]);
+      } catch (err: any) {
+        setError(err.message || "Failed to create user");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token]
+  );
+
+  const updateUser = useCallback(
+    async (id: number, payload: EditUserPayload) => {
+      if (!token) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const updatedUser = await editUser(id, payload, token);
+        setUsers((prev) => prev.map((u) => (u.id === id ? updatedUser : u)));
+      } catch (err: any) {
+        setError(err.message || "Failed to update user");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token]
+  );
+
+ const updateUserRole = useCallback(
+  async (id: number, role_id: number) => {
+    if (!token) return;
+    setLoading(true);
+    setError(null);
     try {
-      const updatedUser = await userService.editUser(userId, updatedData)
+      const updatedUser = await editUser(id, { role_id }, token);
       setUsers((prev) =>
-        prev.map((user) => (user.id === userId ? updatedUser : user))
-      )
+        prev.map((u) => (u.id === id ? updatedUser : u))
+      );
+      console.log("User role updated successfully");
+      console.log(`User ID: ${id}, New Role ID: ${role_id}`);
     } catch (err: any) {
-      setError(err.message || "Error editing user")
+      setError(err.message || "Failed to update role");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  },
+  [token]
+);
 
-  const removeUser = useCallback(async (userId: number) => {
-    setLoading(true)
-    setError(null)
-    try {
-      await userService.deleteUser(userId)
-      setUsers((prev) => prev.filter((user) => user.id !== userId))
-    } catch (err: any) {
-      setError(err.message || "Error deleting user")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
-  const deactivateUser = useCallback(async (userId: number) => {
-    setLoading(true)
-    setError(null)
-    try {
-      const updatedUser = await userService.deactivateUser(userId)
-      setUsers((prev) =>
-        prev.map((user) => (user.id === userId ? updatedUser : user))
-      )
-    } catch (err: any) {
-      setError(err.message || "Error deactivating user")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const deactivate = useCallback((id: number, role_id: number) => {
+    return updateUser(id, { role_id }); 
+  },
+  [updateUser]
+);
+
+  const removeUser = useCallback(
+    async (id: number) => {
+      if (!token) return;
+      setLoading(true);
+      setError(null);
+      try {
+        await deleteUser(id, token);
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+      } catch (err: any) {
+        setError(err.message || "Failed to delete user");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token]
+  );
+
+  // Fetch users once token is loaded
+  useEffect(() => {
+    if (token) fetchUsers();
+  }, [token, fetchUsers]);
 
   return {
     users,
     loading,
     error,
     fetchUsers,
-    editUser,
+    addUser,
+    updateUser,
+    updateUserRole,
+    deactivate,
     removeUser,
-    deactivateUser,
-  }
+  };
 }

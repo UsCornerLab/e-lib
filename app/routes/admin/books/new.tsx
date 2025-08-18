@@ -5,19 +5,20 @@ import { ArrowLeft, Upload, X } from "lucide-react"
 import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
-import { Textarea } from "~/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
 import { Badge } from "~/components/ui/badge"
 import { Link } from "react-router"
+import { useBooks } from "~/hooks/useBooks"
 
 export default function NewBook() {
   const navigate = useNavigate()
+  const { createBook } = useBooks()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [coverImage, setCoverImage] = useState<File | null>(null)
   const [genres, setGenres] = useState<string[]>([])
-  const [authors, setAuthors] = useState<string[]>([])
+  const [author, setAuthors] = useState<string[]>([])
   const [newAuthorInput, setNewAuthorInput] = useState("")
   const [formData, setFormData] = useState({
     title: "",
@@ -34,14 +35,7 @@ export default function NewBook() {
     copies: 1
   })
 
-  const availableGenres = [
-    "fantasy",
-    "social",
-    "science",
-    "history",
-    "biography"
-  ]
-
+  const availableGenres = ["fantasy","social","science","history","biography"]
   const availableFromTypes = ["Donated", "Purchased", "Gifted"]
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -49,61 +43,60 @@ export default function NewBook() {
   }
 
   const handleGenreToggle = (genre: string) => {
-    setGenres((prev) => (prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]))
+    setGenres((prev) =>
+      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
+    )
   }
 
   const handleAddAuthors = () => {
-  if (!newAuthorInput.trim()) return
-  
-  const authorsToAdd = newAuthorInput.split(',')
-    .map(author => author.trim())
-    .filter(author => author.length > 0 && !authors.includes(author))
-  
-  if (authorsToAdd.length > 0) {
-    setAuthors([...authors, ...authorsToAdd])
-    setNewAuthorInput("")
-  }
-}
-
-const handleRemoveAuthor = (authorToRemove: string) => {
-  setAuthors(authors.filter(author => author !== authorToRemove))
-}
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      setCoverImage(file)
+    if (!newAuthorInput.trim()) return
+    const authorsToAdd = newAuthorInput
+      .split(',')
+      .map(a => a.trim())
+      .filter(a => a && !author.includes(a))
+    if (authorsToAdd.length > 0) {
+      setAuthors([...author, ...authorsToAdd])
+      setNewAuthorInput("")
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
-  setIsSubmitting(true)
-
-  
-  const submissionData = {
-    ...formData,
-    genres,
-    authors,
-    cover_image: coverImage ? {
-      name: coverImage.name,
-      size: coverImage.size,
-      type: coverImage.type,
-      lastModified: coverImage.lastModified
-    } : null
+  const handleRemoveAuthor = (authorToRemove: string) => {
+    setAuthors(author.filter(a => a !== authorToRemove))
   }
 
-  console.log("Data to be sent to server:", {
-    book: submissionData,
-    formatted: JSON.stringify(submissionData, null, 2)  
-  })
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) setCoverImage(file)
+  }
 
-  
-  await new Promise((resolve) => setTimeout(resolve, 2000))
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (genres.length === 0) {
+      alert("Please select at least one genre")
+      return
+    }
 
-  setIsSubmitting(false)
-  navigate("/admin/books")
-}
+    setIsSubmitting(true)
+
+    try {
+      const form = new FormData()
+      Object.entries(formData).forEach(([key, value]) => form.append(key, value.toString()))
+      author.forEach(a => form.append("author[]", a))
+      genres.forEach(g => form.append("genre[]", g))
+      //////////////////
+ // Assuming current user ID is 1)
+      /////////////////
+      if (coverImage) form.append("cover_image", coverImage)
+
+      await createBook(form)
+      navigate("/admin/books")
+    } catch (err: any) {
+      console.error("Error creating book:", err)
+      alert(err.message || "Failed to create book")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -123,6 +116,8 @@ const handleRemoveAuthor = (authorToRemove: string) => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+
+            {/* Basic Info */}
             <Card>
               <CardHeader>
                 <CardTitle>Basic Information</CardTitle>
@@ -202,82 +197,80 @@ const handleRemoveAuthor = (authorToRemove: string) => {
               </CardContent>
             </Card>
 
+            {/* Authors */}
             <Card>
-  <CardHeader>
-    <CardTitle>Authors</CardTitle>
-    <CardDescription>Add authors for this book</CardDescription>
-  </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="flex gap-2">
-      <Input
-        value={newAuthorInput}
-        onChange={(e) => setNewAuthorInput(e.target.value)}
-        placeholder="Enter author names, separated by commas"
-        onKeyDown={(e) => e.key === 'Enter' && handleAddAuthors()}
-      />
-      <Button type="button" onClick={handleAddAuthors}>
-        Add
-      </Button>
-    </div>
-    {authors.length > 0 && (
-      <div className="flex flex-wrap gap-2 mt-2">
-        {authors.map((author) => (
-          <Badge key={author} variant="secondary" className="flex items-center gap-1">
-            {author}
-            <button
-              type="button"
-              onClick={() => handleRemoveAuthor(author)}
-              className="rounded-full hover:bg-destructive hover:text-destructive-foreground"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
-        ))}
-      </div>
-    )}
-  </CardContent>
-</Card>
+              <CardHeader>
+                <CardTitle>Authors</CardTitle>
+                <CardDescription>Add authors for this book</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    value={newAuthorInput}
+                    onChange={(e) => setNewAuthorInput(e.target.value)}
+                    placeholder="Enter author names, separated by commas"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddAuthors()}
+                  />
+                  <Button type="button" onClick={handleAddAuthors}>Add</Button>
+                </div>
+                {author.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {author.map((a) => (
+                      <Badge key={a} variant="secondary" className="flex items-center gap-1">
+                        {a}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAuthor(a)}
+                          className="rounded-full hover:bg-destructive hover:text-destructive-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Genres */}
             <Card>
               <CardHeader>
                 <CardTitle>Genres</CardTitle>
                 <CardDescription>Select the genres for this book</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {availableGenres.map((genre) => (
-                      <div key={genre} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={genre}
-                          checked={genres.includes(genre)}
-                          onCheckedChange={() => handleGenreToggle(genre)}
-                        />
-                        <Label htmlFor={genre} className="capitalize">
-                          {genre}
-                        </Label>
-                      </div>
+                <div className="flex flex-wrap gap-2">
+                  {availableGenres.map((g) => (
+                    <div key={g} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={g}
+                        checked={genres.includes(g)}
+                        onCheckedChange={() => handleGenreToggle(g)}
+                      />
+                      <Label htmlFor={g} className="capitalize">{g}</Label>
+                    </div>
+                  ))}
+                </div>
+                {genres.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {genres.map((g) => (
+                      <Badge key={g} variant="secondary">
+                        {g}
+                        <button
+                          type="button"
+                          onClick={() => handleGenreToggle(g)}
+                          className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
                     ))}
                   </div>
-                  {genres.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {genres.map((genre) => (
-                        <Badge key={genre} variant="secondary">
-                          {genre}
-                          <button
-                            type="button"
-                            onClick={() => handleGenreToggle(genre)}
-                            className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                )}
               </CardContent>
             </Card>
 
+            {/* Acquisition */}
             <Card>
               <CardHeader>
                 <CardTitle>Acquisition Details</CardTitle>
@@ -295,14 +288,10 @@ const handleRemoveAuthor = (authorToRemove: string) => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="from_type">Acquisition Type</Label>
-                    <Select value={formData.from_type} onValueChange={(value) => handleInputChange("from_type", value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                    <Select value={formData.from_type} onValueChange={(v) => handleInputChange("from_type", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {availableFromTypes.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
-                        ))}
+                        {availableFromTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -310,6 +299,7 @@ const handleRemoveAuthor = (authorToRemove: string) => {
               </CardContent>
             </Card>
 
+            {/* Shelf */}
             <Card>
               <CardHeader>
                 <CardTitle>Shelf Information</CardTitle>
@@ -338,7 +328,10 @@ const handleRemoveAuthor = (authorToRemove: string) => {
             </Card>
           </div>
 
+          {/* Right Panel */}
           <div className="space-y-6">
+
+            {/* Cover Image */}
             <Card>
               <CardHeader>
                 <CardTitle>Cover Image</CardTitle>
@@ -349,7 +342,7 @@ const handleRemoveAuthor = (authorToRemove: string) => {
                   {coverImage ? (
                     <div className="relative">
                       <img
-                        src={URL.createObjectURL(coverImage) || "/placeholder.svg"}
+                        src={URL.createObjectURL(coverImage)}
                         alt="Book cover preview"
                         className="w-full aspect-[2/3] object-cover rounded-lg"
                       />
@@ -368,9 +361,7 @@ const handleRemoveAuthor = (authorToRemove: string) => {
                       <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
                       <div className="mt-4">
                         <Label htmlFor="cover-upload" className="cursor-pointer">
-                          <span className="text-sm font-medium text-primary hover:text-primary/80">
-                            Click to upload
-                          </span>
+                          <span className="text-sm font-medium text-primary hover:text-primary/80">Click to upload</span>
                           <span className="text-sm text-muted-foreground"> or drag and drop</span>
                         </Label>
                         <Input

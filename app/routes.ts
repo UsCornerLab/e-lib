@@ -18,6 +18,7 @@ export default [
     route("users", "./routes/admin/users/index.tsx"),
     route("users/new", "./routes/admin/users/new.tsx"),
     route("users/:id/edit", "./routes/admin/users/edit.tsx"),
+    route("users/:id/role", "./routes/admin/users/changerole.tsx"),
     route("news", "./routes/admin/news/index.tsx"), 
     route("news/new", "./routes/admin/news/new.tsx"),
     route("news/:id/edit", "./routes/admin/news/edit.tsx"),
