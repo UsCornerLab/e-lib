@@ -9,6 +9,7 @@ import { Input } from "~/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog"
 import Barcode from "react-barcode"
 import { useBooks, type Book } from "../../../hooks/useBooks"
+import RequireAuth from "~/components/auth/RequireAuth";
 
 export default function BooksManagement() {
   const [searchQuery, setSearchQuery] = useState("")
