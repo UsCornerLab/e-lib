@@ -1,10 +1,10 @@
-import { useState } from "react"
-import { Link } from "react-router"
-import { Search, Filter, MoreHorizontal, Edit, Trash2, Shield, UserCheck, UserX } from "lucide-react"
-import { Button } from "~/components/ui/button"
-import { Input } from "~/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table"
+import { useState } from "react";
+import { Link } from "react-router";
+import { Search, Filter, MoreHorizontal, Edit, Trash2, Shield, UserCheck, UserX } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,53 +15,45 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-} from "~/components/ui/dropdown-menu"
-import { Badge } from "~/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
-import { useUsers } from "~/hooks/useUsers"
+} from "~/components/ui/dropdown-menu";
+import { Badge } from "~/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { useUsers } from "~/hooks/useUsers";
 
 const availableRoles = [
   { id: 1, role_type: "admin" },
   { id: 2, role_type: "librarian" },
   { id: 3, role_type: "editor" },
   { id: 4, role_type: "member" },
-]
+];
 
 export default function UsersManagement() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const { users, loading, error, removeUser, updateUserRole, updateUserStatus } = useUsers()
+  const [searchQuery, setSearchQuery] = useState("");
+  const { users, loading, error, removeUser, updateUserRole, updateUserStatus } = useUsers();
 
-  // Helper: get role type string from user.role (number or object)
-  const getRoleType = (role: number | { id: number; role_type: string }) => {
-    if (typeof role === "number") {
-      const found = availableRoles.find((r) => r.id === role)
-      return found ? found.role_type : "unknown"
-    } else if (role && typeof role === "object") {
-      return role.role_type
-    }
-    return "unknown"
-  }
+  const getRoleType = (role: string | { id: number; role_type: string }) => {
+    if (typeof role === "string") return role;
+    if (role && typeof role === "object") return role.role_type;
+    return "unknown";
+  };
 
   const filteredUsers = users.filter((user) =>
     [user.first_name, user.last_name, user.email, getRoleType(user.role)]
       .some((field) => field.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
+  );
 
-  // ✅ Handle role change
   const handleChangeRole = (userId: number, role: string) => {
-    updateUserRole(userId, role)
-    console.log(`Change role for user ${userId} to ${role}`)
-  }
+    updateUserRole(userId, role);
+    console.log(`Changed role for user ${userId} to ${role}`);
+  };
 
-  // ✅ Handle activate/deactivate
   const handleStatusToggle = (userId: number, verified: boolean) => {
-    updateUserStatus(userId, !verified)
-  }
+    updateUserStatus(userId, !verified);
+  };
 
-  // ✅ Handle delete
   const handleDelete = (userId: number) => {
-    removeUser(userId)
-  }
+    removeUser(userId);
+  };
 
   return (
     <div className="space-y-6">
@@ -119,9 +111,7 @@ export default function UsersManagement() {
                             <AvatarFallback>{user.first_name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-medium">
-                              {user.first_name} {user.last_name}
-                            </div>
+                            <div className="font-medium">{user.first_name} {user.last_name}</div>
                             <div className="text-sm text-muted-foreground">{user.email}</div>
                           </div>
                         </div>
@@ -137,18 +127,10 @@ export default function UsersManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {new Date(user.created_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {new Date(user.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                       </TableCell>
                       <TableCell>
-                        {new Date(user.updated_at).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {new Date(user.updated_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -177,7 +159,7 @@ export default function UsersManagement() {
                                 {availableRoles.map((role) => (
                                   <DropdownMenuItem
                                     key={role.id}
-                                    onClick={() => handleChangeRole(user.id, role_type)}
+                                    onClick={() => handleChangeRole(user.id, role.role_type)}
                                   >
                                     {role.role_type}
                                   </DropdownMenuItem>
@@ -203,10 +185,7 @@ export default function UsersManagement() {
                             <DropdownMenuSeparator />
 
                             {/* Delete */}
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDelete(user.id)}
-                            >
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user.id)}>
                               <Trash2 className="mr-2 h-4 w-4" />
                               Delete Account
                             </DropdownMenuItem>
@@ -222,20 +201,20 @@ export default function UsersManagement() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 // Helper for role badge styling
 function getRoleBadgeVariant(role: string) {
   switch (role) {
     case "admin":
-      return "destructive"
+      return "destructive";
     case "librarian":
-      return "default"
+      return "default";
     case "editor":
-      return "secondary"
+      return "secondary";
     case "member":
     default:
-      return "outline"
+      return "outline";
   }
 }

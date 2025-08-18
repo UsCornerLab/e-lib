@@ -72,17 +72,15 @@ export function useUsers() {
   );
 
  const updateUserRole = useCallback(
-  async (id: number, role_id: number) => {
+  async (id: number, role: string) => {
     if (!token) return;
     setLoading(true);
     setError(null);
     try {
-      const updatedUser = await editUser(id, { role_id }, token);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === id ? updatedUser : u))
-      );
+      const updatedUser = await editUser(id, { role }, token);
+      setUsers((prev) => prev.map((u) => (u.id === id ? updatedUser : u)));
       console.log("User role updated successfully");
-      console.log(`User ID: ${id}, New Role ID: ${role_id}`);
+      console.log(`User ID: ${id}, New Role: ${role}`);
     } catch (err: any) {
       setError(err.message || "Failed to update role");
     } finally {
@@ -93,11 +91,24 @@ export function useUsers() {
 );
 
 
-  const deactivate = useCallback((id: number, role_id: number) => {
-    return updateUser(id, { role_id }); 
+const updateUserStatus = useCallback(
+  async (id: number, verified: boolean) => {
+    if (!token) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const updatedUser = await editUser(id, { verified }, token);
+      setUsers((prev) => prev.map((u) => (u.id === id ? updatedUser : u)));
+      console.log(`User ${id} verified status updated to ${verified}`);
+    } catch (err: any) {
+      setError(err.message || "Failed to update status");
+    } finally {
+      setLoading(false);
+    }
   },
-  [updateUser]
+  [token]
 );
+
 
   const removeUser = useCallback(
     async (id: number) => {
@@ -129,7 +140,7 @@ export function useUsers() {
     addUser,
     updateUser,
     updateUserRole,
-    deactivate,
+    updateUserStatus,
     removeUser,
   };
 }
