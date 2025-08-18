@@ -1,8 +1,8 @@
 // services/userService.ts
-export interface Role {
-  id: number;
-  role_type: string;
-}
+// export interface Role {
+//   id: number;
+//   role_type: string;
+// }
 
 export interface User {
   id: number;
@@ -10,14 +10,14 @@ export interface User {
   last_name: string;
   email: string;
   birthDate: string;
-  role_id: number;
+  role: string;
   address: string;
   id_photo_path: string;
   profile: string;
   verified: boolean;
   created_at: string;
   updated_at: string;
-  role: Role;
+
 }
 
 export interface UsersResponse {
@@ -49,7 +49,7 @@ export interface CreateUserPayload {
   email: string;
   birthDate: string;
   address: string;
-  role_id: number;
+  role: number;
   password: string;
 }
 
@@ -70,7 +70,7 @@ export interface EditUserPayload {
   email?: string;
   birthDate?: string;
   address?: string;
-  role_id?: number;
+  role?: string;
   verified?: boolean;
   profile?: File;       
   id_photo_path?: File
@@ -89,11 +89,11 @@ export async function editUser(id: number, payload: EditUserPayload, token: stri
 
 export function updateUserRole(
   id: number,
-  role_id: number,
+  role: string,
   token: string
 ): Promise<User> {
-  console.log(`Updating role for user ${id} to ${role_id}`);
-  return editUser(id, { role_id }, token);
+  console.log(`Updating role for user ${id} to ${role}`);
+  return editUser(id, { role }, token);
 }
 
 // Update active/deactivated status only

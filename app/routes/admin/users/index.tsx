@@ -48,9 +48,9 @@ export default function UsersManagement() {
   )
 
   // ✅ Handle role change
-  const handleChangeRole = (userId: number, roleId: number) => {
-    updateUserRole(userId, roleId)
-    console.log(`Change role for user ${userId} to ${roleId}`)
+  const handleChangeRole = (userId: number, role: string) => {
+    updateUserRole(userId, role)
+    console.log(`Change role for user ${userId} to ${role}`)
   }
 
   // ✅ Handle activate/deactivate
@@ -177,7 +177,7 @@ export default function UsersManagement() {
                                 {availableRoles.map((role) => (
                                   <DropdownMenuItem
                                     key={role.id}
-                                    onClick={() => handleChangeRole(user.id, role.id)}
+                                    onClick={() => handleChangeRole(user.id, role_type)}
                                   >
                                     {role.role_type}
                                   </DropdownMenuItem>
