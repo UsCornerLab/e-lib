@@ -1,20 +1,53 @@
-import { useState, useRef, useEffect } from "react"
-import { Link } from "react-router"
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Eye } from "lucide-react"
-import { Button } from "~/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from "~/components/ui/dropdown-menu"
-import { Badge } from "~/components/ui/badge"
-import { Input } from "~/components/ui/input"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "~/components/ui/dialog"
-import Barcode from "react-barcode"
-import { useBooks, type Book } from "../../../hooks/useBooks"
+// routes/books/index.tsx
+import { useState, useRef, useEffect } from "react";
+import { Link } from "react-router";
+import {
+  Plus,
+  Search,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { Button } from "~/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "~/components/ui/dropdown-menu";
+import { Badge } from "~/components/ui/badge";
+import { Input } from "~/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import Barcode from "react-barcode";
+import { useBooks, type Book } from "../../../hooks/useBooks";
 import RequireAuth from "~/components/auth/RequireAuth";
 
 export default function BooksManagement() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [barcodeBook, setBarcodeBook] = useState<Book | null>(null)
-  const barcodeRef = useRef<HTMLDivElement>(null)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [barcodeBook, setBarcodeBook] = useState<Book | null>(null);
+  const barcodeRef = useRef<HTMLDivElement>(null);
+
+  // pagination controls local state (defaults)
+  const [localPerPage, setLocalPerPage] = useState<number>(10);
 
   // Use our custom hook
   const {
@@ -23,72 +56,141 @@ export default function BooksManagement() {
     error,
     fetchBooks,
     deleteBook,
-  } = useBooks()
+    pagination,
+    page,
+    perPage,
+    setPage,
+    setPerPage,
+  } = useBooks();
 
-  // Fetch books on mount
+  // Debounce search input (500ms)
   useEffect(() => {
-    fetchBooks()
-  }, [fetchBooks])
+    const id = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 500);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
 
-  const filteredBooks = books.filter(
-    (book) =>
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.ISBN.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.author?.some((a) => a.author_name.toLowerCase().includes(searchQuery.toLowerCase()))
-  )
+  // Fetch books when page/perPage/debouncedSearch change
+  useEffect(() => {
+    // synchronize hook perPage when localPerPage changes
+    fetchBooks(page || 1, localPerPage, debouncedSearch);
+  }, [fetchBooks, page, localPerPage, debouncedSearch]);
+
+  // Keep hook-perPage in sync with localPerPage
+  useEffect(() => {
+    setPerPage(localPerPage);
+  }, [localPerPage, setPerPage]);
 
   const handleDelete = async (id: number) => {
     if (window.confirm("Are you sure you want to delete this book?")) {
-      await deleteBook(id)
+      await deleteBook(id);
     }
-  }
+  };
 
   const handleDownloadBarcode = () => {
-    if (!barcodeRef.current || !barcodeBook) return
-    const svg = barcodeRef.current.querySelector("svg")
-    if (!svg) return
+    if (!barcodeRef.current || !barcodeBook) return;
+    const svg = barcodeRef.current.querySelector("svg");
+    if (!svg) return;
 
-    const xml = new XMLSerializer().serializeToString(svg)
-    const canvas = document.createElement("canvas")
-    const ctx = canvas.getContext("2d")
-    const img = new Image()
+    const xml = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
 
     img.onload = () => {
-      canvas.width = img.width
-      canvas.height = img.height
-      ctx?.drawImage(img, 0, 0)
-      const url = canvas.toDataURL("image/png")
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `${barcodeBook.title || "book"}-barcode.png`
-      link.click()
-    }
-    img.src = "data:image/svg+xml;base64," + btoa(xml)
-  }
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const url = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${barcodeBook.title || "book"}-barcode.png`;
+      link.click();
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(xml);
+  };
 
-  if (loading) return <div className="p-6">Loading books...</div>
-  if (error) return <div className="p-6 text-destructive">Error: {error}</div>
+  if (loading) return <div className="p-6">Loading books...</div>;
+  if (error) return <div className="p-6 text-destructive">Error: {error}</div>;
+
+  const handlePrev = () => {
+    if (!pagination) return;
+    if (pagination.current_page > 1) {
+      setPage(pagination.current_page - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (!pagination) return;
+    if (pagination.current_page < pagination.last_page) {
+      setPage(pagination.current_page + 1);
+    }
+  };
+
+  const gotoPage = (p: number) => {
+    if (!pagination) return;
+    const pageNum = Math.max(1, Math.min(p, pagination.last_page));
+    setPage(pageNum);
+  };
+
+  const getPages = () => {
+    if (!pagination) return [];
+    const current = pagination.current_page;
+    const last = pagination.last_page;
+    const delta = 2;
+    const range: number[] = [];
+    for (
+      let i = Math.max(1, current - delta);
+      i <= Math.min(last, current + delta);
+      i++
+    ) {
+      range.push(i);
+    }
+    // if first or last not included, consider adding them for quick jump (simpler approach)
+    if (range[0] !== 1) range.unshift(1);
+    if (range[range.length - 1] !== last) range.push(last);
+    return Array.from(new Set(range));
+  };
 
   return (
     <div className="p-6">
       <h1 className="text-xl font-bold mb-4">Books Management</h1>
 
       <div className="flex justify-between items-center mb-4">
-        <div className="relative flex-1">
+        <div className="relative flex-1 max-w-lg">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search books by title, author, or ISBN..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              // reset to first page on new query
+              setPage(1);
+            }}
             className="pl-8"
           />
         </div>
-        <Link to="/admin/books/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Book
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <label className="text-sm">Per page:</label>
+          <select
+            value={localPerPage}
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              setLocalPerPage(v);
+              setPage(1);
+            }}
+            className="border rounded px-2 py-1"
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+          <Link to="/admin/books/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Book
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Table>
@@ -102,21 +204,31 @@ export default function BooksManagement() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredBooks.length === 0 ? (
+          {books.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="text-center">
                 No books found
               </TableCell>
             </TableRow>
           ) : (
-            filteredBooks.map((book) => (
+            books.map((book) => (
               <TableRow key={book.id}>
                 <TableCell className="font-medium">{book.title}</TableCell>
                 <TableCell className="font-mono text-sm">{book.ISBN}</TableCell>
-                <TableCell>{new Date(book.publication_date).getFullYear()}</TableCell>
                 <TableCell>
-                  <Badge variant={book.available_copies && book.available_copies > 0 ? "default" : "destructive"}>
-                    {book.available_copies && book.available_copies > 0 ? "Available" : "Checked Out"}
+                  {new Date(book.publication_date).getFullYear()}
+                </TableCell>
+                <TableCell>
+                  <Badge
+                    variant={
+                      book.available_copies && book.available_copies > 0
+                        ? "default"
+                        : "destructive"
+                    }
+                  >
+                    {book.available_copies && book.available_copies > 0
+                      ? "Available"
+                      : "Checked Out"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -142,12 +254,18 @@ export default function BooksManagement() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem>
-                        <Button variant="secondary" onClick={() => setBarcodeBook(book)}>
+                        <Button
+                          variant="secondary"
+                          onClick={() => setBarcodeBook(book)}
+                        >
                           View Barcode
                         </Button>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(book.id)}>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => handleDelete(book.id)}
+                      >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
@@ -160,6 +278,46 @@ export default function BooksManagement() {
         </TableBody>
       </Table>
 
+      {/* Pagination controls */}
+      {pagination && (
+        <div className="flex items-center justify-between mt-4">
+          <div className="text-sm">
+            Showing {pagination.from ?? 0} - {pagination.to ?? 0} of{" "}
+            {pagination.total}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handlePrev}
+              disabled={pagination.current_page === 1}
+            >
+              <ChevronLeft />
+            </Button>
+
+            {getPages().map((p, idx) => (
+              <Button
+                key={p + "-" + idx}
+                variant={p === pagination.current_page ? "default" : "ghost"}
+                size="sm"
+                onClick={() => gotoPage(p)}
+              >
+                {p}
+              </Button>
+            ))}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleNext}
+              disabled={pagination.current_page === pagination.last_page}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
+        </div>
+      )}
+
       <Dialog open={!!barcodeBook} onOpenChange={() => setBarcodeBook(null)}>
         <DialogContent>
           <DialogHeader>
@@ -168,7 +326,13 @@ export default function BooksManagement() {
           {barcodeBook && (
             <div className="flex flex-col items-center">
               <div ref={barcodeRef}>
-                <Barcode value={barcodeBook.ISBN} format="CODE128" width={2} height={100} displayValue={true} />
+                <Barcode
+                  value={barcodeBook.ISBN}
+                  format="CODE128"
+                  width={2}
+                  height={100}
+                  displayValue={true}
+                />
               </div>
               <Button className="mt-4" onClick={handleDownloadBarcode}>
                 Download Barcode
@@ -178,5 +342,5 @@ export default function BooksManagement() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
