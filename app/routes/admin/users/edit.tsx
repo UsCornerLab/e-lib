@@ -9,6 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Link } from "react-router";
 import { useUsers } from "~/hooks/useUsers";
 
+interface FormData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  address: string;
+  birthDate: string;
+  profile?: string;
+}
+
 export default function EditUser() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -17,27 +26,24 @@ export default function EditUser() {
   const user = users.find((u) => u.id === userId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileImage, setProfileImage] = useState<File | null>(null);
-  const [formData, setFormData] = useState<any>(null);
+  const [formData, setFormData] = useState<FormData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       setFormData({
-        firstName: user.first_name,
-        lastName: user.last_name,
+        first_name: user.first_name,
+        last_name: user.last_name,
         email: user.email,
         address: user.address,
         birthDate: user.birthDate,
         profile: user.profile,
-        joinDate: new Date(user.created_at).toISOString().slice(0, 10),
-        lastActive: new Date(user.updated_at).toISOString().slice(0, 10),
       });
     }
   }, [user]);
 
-  if (!user || !formData) return <p>Loading user...</p>;
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => prev ? { ...prev, [field]: value } : null);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,22 +53,25 @@ export default function EditUser() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData) return;
+    
     setIsSubmitting(true);
+    setError(null);
+    
     try {
       await updateUser(userId, {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        address: formData.address,
-        birthDate: formData.birthDate,
+        ...formData,
+        profile: profileImage || undefined, // Only include if there's a new image
       });
       navigate("/admin/users");
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : "Failed to update user");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (!user || !formData) return <p>Loading user...</p>;
 
   return (
     <div className="space-y-6">
@@ -77,11 +86,17 @@ export default function EditUser() {
           <div>
             <h1 className="text-3xl font-bold">Edit User</h1>
             <p className="text-muted-foreground">
-              {formData.firstName} {formData.lastName}
+              {formData.first_name} {formData.last_name}
             </p>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
 
       <Tabs defaultValue="profile" className="space-y-6">
         <TabsList>
@@ -100,13 +115,13 @@ export default function EditUser() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input
                         placeholder="First Name"
-                        value={formData.firstName}
-                        onChange={(e) => handleInputChange("firstName", e.target.value)}
+                        value={formData.first_name}
+                        onChange={(e) => handleInputChange("first_name", e.target.value)}
                       />
                       <Input
                         placeholder="Last Name"
-                        value={formData.lastName}
-                        onChange={(e) => handleInputChange("lastName", e.target.value)}
+                        value={formData.last_name}
+                        onChange={(e) => handleInputChange("last_name", e.target.value)}
                       />
                     </div>
                     <Input
@@ -143,8 +158,8 @@ export default function EditUser() {
                         }
                       />
                       <AvatarFallback>
-                        {formData.firstName.charAt(0)}
-                        {formData.lastName.charAt(0)}
+                        {formData.first_name.charAt(0)}
+                        {formData.last_name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     <Input

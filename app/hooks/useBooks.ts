@@ -112,6 +112,7 @@ export function useBooks() {
     [fetchBooks, page, perPage, query]
   );
 
+
   // Delete book -> refetch current page
   const deleteBook = useCallback(
     async (id: number) => {

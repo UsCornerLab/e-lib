@@ -64,6 +64,7 @@ export type BookPayload = Omit<
   Book,
   "id" | "created_at" | "updated_at" | "added_by" | "status" | "from" | "active"
 >
+export type UpdateBookPayload = Partial<BookPayload>;
 
 // ====================
 // API Setup
@@ -155,28 +156,30 @@ export const bookServices = {
     }
   },
   // Update a book
-  updateBook: async (
-    id: number,
-    bookData: BookPayload,
-    token: string
-  ): Promise<Book> => {
-    try {
-      const response = await axios.put<BookResponse>(
-        `${API_URL}/books/${id}`,
-        bookData,
-        {
+
+    updateBook: async (id: number, bookData: UpdateBookPayload | FormData, token: string): Promise<Book> => {
+      try {
+        let config: any = {
           headers: { Authorization: `Bearer ${token}` },
         }
-      );
-      if (!response.data.status || !response.data.book) {
-        throw new Error(response.data.message || "Failed to update book");
+        // If FormData, set proper headers
+        if (bookData instanceof FormData) {
+          config.headers["Content-Type"] = "multipart/form-data"
+        }
+        const response = await axios.put<BookResponse>(`${API_URL}/books/${id}`, bookData, config)
+        if (!response.data.status || !response.data.book) {
+          throw new Error(response.data.message || "Failed to update book")
+        }
+        return response.data.book
+      } catch (error: any) {
+        console.error(`Error updating book ${id}:`, {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+        })
+        throw new Error(error.response?.data?.message || error.message || "Failed to update book")
       }
-      return response.data.book;
-    } catch (error) {
-      console.error(`Error updating book ${id}:`, error);
-      throw error;
-    }
-  },
+    },
 
   // Delete a book
   deleteBook: async (id: number, token: string): Promise<void> => {
