@@ -1,55 +1,51 @@
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card"
-import { BookOpen, FileText, Users, Calendar, TrendingUp, Eye } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  BookOpen,
+  FileText,
+  Users,
+  Calendar,
+  Eye,
+  TrendingUp,
+} from "lucide-react";
+import { useDashboard } from "~/hooks/useDashboard";
 
 export function DashboardStats() {
-  const stats = [
+  const { stats, loading, error } = useDashboard();
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
+  if (!stats) return null;
+
+  const mappedStats = [
     {
       title: "Total Books",
-      value: "52,254",
-      description: "+12% from last month",
+      value: stats.total_books,
+      description: `Deactivated: ${stats.deactivated_books}`,
       icon: BookOpen,
-      trend: "up",
     },
     {
-      title: "Active Users",
-      value: "1,847",
-      description: "+5% from last month",
+      title: "Total Users",
+      value: stats.total_users,
+      description: `Deactivated: ${stats.deactivated_users}`,
       icon: Users,
-      trend: "up",
     },
     {
       title: "News Articles",
-      value: "127",
-      description: "8 published this month",
+      value: stats.total_news,
+      description: "Total published news posts",
       icon: FileText,
-      trend: "neutral",
     },
     {
-      title: "Upcoming Events",
-      value: "23",
-      description: "Next 30 days",
+      title: "Categories",
+      value: stats.total_categories,
+      description: "Book categories",
       icon: Calendar,
-      trend: "neutral",
     },
-    {
-      title: "Monthly Visitors",
-      value: "8,432",
-      description: "+18% from last month",
-      icon: Eye,
-      trend: "up",
-    },
-    {
-      title: "Books Borrowed",
-      value: "3,241",
-      description: "This month",
-      icon: TrendingUp,
-      trend: "up",
-    },
-  ]
+  ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {stats.map((stat) => (
+      {mappedStats.map((stat) => (
         <Card key={stat.title}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
@@ -62,5 +58,5 @@ export function DashboardStats() {
         </Card>
       ))}
     </div>
-  )
+  );
 }

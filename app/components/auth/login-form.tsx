@@ -3,7 +3,7 @@ import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useAuth } from "~/hooks/useAuth";
 
 export function LoginForm({
@@ -11,6 +11,7 @@ export function LoginForm({
   ...props
 }: React.ComponentPropsWithoutRef<"form">) {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -23,9 +24,14 @@ export function LoginForm({
 
     try {
       await login(email, password);
-      
-    } catch {
-      setError("Invalid email or password");
+      navigate("/admin/books");
+    } catch (err: any) {
+      // Prefer server message
+      const serverMsg =
+        err?.message ||
+        err?.response?.data?.message ||
+        "Invalid email or password";
+      setError(serverMsg);
     } finally {
       setLoading(false);
     }
