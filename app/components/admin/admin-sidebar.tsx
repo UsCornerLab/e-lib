@@ -13,6 +13,8 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "~/components/ui/sidebar"
+import { useNavigate } from "react-router";
+import { useAuth } from "~/hooks/useAuth";
 
 interface AdminSidebarProps {
   userRole: string
@@ -21,6 +23,8 @@ interface AdminSidebarProps {
 export function AdminSidebar({ userRole }: AdminSidebarProps) {
   const location = useLocation()
   const pathname = location.pathname
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const navigationItems = [
     {
@@ -98,10 +102,23 @@ export function AdminSidebar({ userRole }: AdminSidebarProps) {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link to="/admin/logout">
-                <LogOut className="h-4 w-4" />
+              <button
+      type="button"
+      onClick={async () => {
+        try {
+          await logout();
+        } catch (e) {
+          // swallow — logout clears client state anyway
+          console.warn("logout failed:", e);
+        } finally {
+          navigate("/login");
+        }
+      }}
+      className="w-full flex items-center gap-2"
+    >
+      <LogOut className="h-4 w-4" />
                 <span>Logout</span>
-              </Link>
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

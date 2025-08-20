@@ -1,3 +1,5 @@
+import "~/services/axiosConfig"; // <-- add this line near other imports
+import { AuthProvider } from "~/context/AuthProvider"; // add this import
 import {
   isRouteErrorResponse,
   Links,
@@ -33,7 +35,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body suppressHydrationWarning>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         <ScrollRestoration />
         <Scripts />
         {/* <Toaster /> */}

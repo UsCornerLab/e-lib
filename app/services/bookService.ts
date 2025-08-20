@@ -40,10 +40,20 @@ export interface Book {
   origin: { id: number; org_name: string; type: string }
 }
 
+export interface PaginatedBooks {
+  data: Book[]
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+  from?: number
+  to?: number
+}
+
 export interface BookResponse {
   status: boolean
   message: string
-  books?: Book[]
+  books?: PaginatedBooks
   book?: Book
 }
 
@@ -66,18 +76,31 @@ const API_URL = "http://127.0.0.1:8000/api"
 // ====================
 export const bookServices = {
   // Get all books
-  getBooks: async (token: string): Promise<Book[]> => {
+  getBooks: async (
+    token: string,
+    page: number = 1,
+    perPage: number = 10,
+    q: string = ""
+  ): Promise<PaginatedBooks> => {
     try {
       const response = await axios.get<BookResponse>(`${API_URL}/books`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!response.data.status) {
-        throw new Error(response.data.message || "Failed to fetch books")
+        params: {
+          page,
+          per_page: perPage,
+          q: q || undefined,
+        },
+      });
+      if (!response.data.status || !response.data.books) {
+        throw new Error(response.data.message || "Failed to fetch books");
       }
-      return response.data.books || []
-    } catch (error) {
-      console.error("Error fetching books:", error)
-      throw error
+      return response.data.books;
+    } catch (error: any) {
+      console.error("Error fetching books:", {
+        message: error.message,
+        response: error.response?.data,
+      });
+      throw error;
     }
   },
 
@@ -86,26 +109,37 @@ export const bookServices = {
     try {
       const response = await axios.get<BookResponse>(`${API_URL}/books/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      })
+      });
       if (!response.data.status || !response.data.book) {
-        throw new Error(response.data.message || "Book not found")
+        throw new Error(response.data.message || "Book not found");
       }
-      return response.data.book
+      return response.data.book;
     } catch (error) {
-      console.error(`Error fetching book ${id}:`, error)
-      throw error
+      console.error(`Error fetching book ${id}:`, error);
+      throw error;
     }
   },
 
   createBook: async (bookData: BookPayload, token: string): Promise<Book> => {
     try {
-      console.log("Sending POST request to:", `${API_URL}/books`, "with data:", bookData, "token:", token);
-      const response = await axios.post<BookResponse>(`${API_URL}/books`, bookData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      console.log(
+        "Sending POST request to:",
+        `${API_URL}/books`,
+        "with data:",
+        bookData,
+        "token:",
+        token
+      );
+      const response = await axios.post<BookResponse>(
+        `${API_URL}/books`,
+        bookData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       console.log("API response for createBook:", response.data);
       if (!response.data.status || !response.data.book) {
-        throw new Error(response.data.message || 'Failed to create book');
+        throw new Error(response.data.message || "Failed to create book");
       }
       return response.data.book;
     } catch (error: any) {
@@ -114,10 +148,15 @@ export const bookServices = {
         status: error.response?.status,
         data: error.response?.data,
       });
-      throw new Error(error.response?.data?.message || error.message || 'Failed to create book');
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to create book"
+      );
     }
   },
   // Update a book
+
     updateBook: async (id: number, bookData: UpdateBookPayload | FormData, token: string): Promise<Book> => {
       try {
         let config: any = {
@@ -145,15 +184,18 @@ export const bookServices = {
   // Delete a book
   deleteBook: async (id: number, token: string): Promise<void> => {
     try {
-      const response = await axios.delete<BookResponse>(`${API_URL}/books/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const response = await axios.delete<BookResponse>(
+        `${API_URL}/books/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (!response.data.status) {
-        throw new Error(response.data.message || "Failed to delete book")
+        throw new Error(response.data.message || "Failed to delete book");
       }
     } catch (error) {
-      console.error(`Error deleting book ${id}:`, error)
-      throw error
+      console.error(`Error deleting book ${id}:`, error);
+      throw error;
     }
   },
-}
+};
