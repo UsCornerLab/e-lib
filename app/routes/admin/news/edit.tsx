@@ -1,402 +1,229 @@
+// app/routes/admin/news/$id/edit.tsx
+import type React from "react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams, Link } from "react-router";
+import { ArrowLeft, Upload, X } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import { useNews } from "~/hooks/useNews";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { useNavigate, useParams } from "react-router"
-import { ArrowLeft, Upload, X, Plus, Minus, Save, Trash2 } from "lucide-react"
-import { Button } from "~/components/ui/button"
-import { Input } from "~/components/ui/input"
-import { Label } from "~/components/ui/label"
-import { Textarea } from "~/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
-import { Badge } from "~/components/ui/badge"
-import { Link } from "react-router"
-import { getArticleById, type ArticleSection } from "~/lib/news-data"
+function toDateTimeLocal(value?: string) {
+  if (!value) return new Date().toISOString().slice(0, 16);
+  const d = new Date(value);
+  const iso = d.toISOString();
+  return iso.slice(0, 16); // "YYYY-MM-DDTHH:mm"
+}
 
+export default function EditNewsPage() {
+  const { id } = useParams();
+  const newsId = Number(id);
+  const navigate = useNavigate();
+  const { fetchOne, update, remove } = useNews();
 
-
-
-export default function EditArticle() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [featuredImage, setFeaturedImage] = useState<File | null>(null)
-  const [tags, setTags] = useState<string[]>([])
-  const [newTag, setNewTag] = useState("")
-
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [featuredImageFile, setFeaturedImageFile] = useState<File | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
+  const [form, setForm] = useState({
     title: "",
+    slug: "",
     excerpt: "",
-    category: "",
-    author: "",
-    authorTitle: "",
-    publishedAt: "",
-    imageAlt: "",
-    imageCaption: "",
-  })
+    content: "",
+    publishedAt: toDateTimeLocal(),
+    isPublished: false,
+  });
 
-  const [content, setContent] = useState<ArticleSection[]>([])
-
-  const categories = ["events", "announcements", "programs", "resources", "community"]
-
-  // Load article data
   useEffect(() => {
-    const article = getArticleById(id || "" )
-    if (article) {
-      setFormData({
-        title: article.title,
-        excerpt: article.excerpt,
-        category: article.category,
-        author: article.author || "",
-        authorTitle: article.authorTitle || "",
-        publishedAt: new Date(article.publishedAt).toISOString().slice(0, 16),
-        imageAlt: article.imageAlt || "",
-        imageCaption: article.imageCaption || "",
-      })
-      setContent(article.content)
-      setTags(article.tags)
+    if (!newsId) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const item = await fetchOne(newsId);
+        setForm({
+          title: item.title ?? "",
+          slug: item.slug ?? "",
+          excerpt: item.excerpt ?? "",
+          content: item.content ?? "",
+          publishedAt: toDateTimeLocal(item.published_at ?? undefined),
+          isPublished: !!item.is_published,
+        });
+        setExistingImageUrl(item.featured_image ?? null);
+      } catch (err: any) {
+        console.error("Failed to load news:", err);
+        alert(err?.message || "Failed to load news item");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [newsId, fetchOne]);
+
+  const handleChange = (field: keyof typeof form, value: string | boolean) => {
+    setForm((p) => ({ ...p, [field]: value as any }));
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setFeaturedImageFile(f);
+    if (f) {
+      setExistingImageUrl(URL.createObjectURL(f)); // preview chosen file
     }
-  }, [id])
+  };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      setFeaturedImage(file)
+  const validate = () => {
+    if (!form.title.trim()) {
+      alert("Title is required");
+      return false;
     }
-  }
-
-  const addTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()])
-      setNewTag("")
+    if (!form.slug.trim()) {
+      alert("Slug is required");
+      return false;
     }
-  }
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
-  }
-
-  const addContentSection = (type: ArticleSection["type"]) => {
-    const newSection: ArticleSection = { type, content: "" }
-    if (type === "list") {
-      newSection.items = [""]
+    if (!form.content.trim()) {
+      alert("Content is required");
+      return false;
     }
-    setContent([...content, newSection])
-  }
-
-  const updateContentSection = (index: number, updates: Partial<ArticleSection>) => {
-    const newContent = [...content]
-    newContent[index] = { ...newContent[index], ...updates }
-    setContent(newContent)
-  }
-
-  const removeContentSection = (index: number) => {
-    setContent(content.filter((_, i) => i !== index))
-  }
-
-  const addListItem = (sectionIndex: number) => {
-    const newContent = [...content]
-    const section = newContent[sectionIndex]
-    if (section.type === "list" && section.items) {
-      section.items.push("")
+    if (form.isPublished && !form.publishedAt) {
+      alert("Published date is required when publishing");
+      return false;
     }
-    setContent(newContent)
-  }
+    return true;
+  };
 
-  const updateListItem = (sectionIndex: number, itemIndex: number, value: string) => {
-    const newContent = [...content]
-    const section = newContent[sectionIndex]
-    if (section.type === "list" && section.items) {
-      section.items[itemIndex] = value
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setIsSubmitting(true);
+    try {
+      const fd = new FormData();
+      fd.append("title", form.title);
+      fd.append("slug", form.slug);
+      fd.append("excerpt", form.excerpt || "");
+      fd.append("content", form.content);
+      fd.append("is_published", form.isPublished ? "1" : "0");
+      if (form.isPublished) fd.append("published_at", form.publishedAt);
+      if (featuredImageFile) fd.append("featured_image", featuredImageFile);
+      // update via hook (which will add _method=PUT as needed)
+      await update(newsId, fd);
+      navigate("/admin/news");
+    } catch (err: any) {
+      console.error("Update failed:", err);
+      alert(err?.message || "Failed to update news");
+    } finally {
+      setIsSubmitting(false);
     }
-    setContent(newContent)
-  }
-
-  const removeListItem = (sectionIndex: number, itemIndex: number) => {
-    const newContent = [...content]
-    const section = newContent[sectionIndex]
-    if (section.type === "list" && section.items) {
-      section.items = section.items.filter((_, i) => i !== itemIndex)
-    }
-    setContent(newContent)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    console.log("Updated article data:", {
-      ...formData,
-      content,
-      tags,
-      featuredImage: featuredImage?.name,
-    })
-
-    setIsSubmitting(false)
-    navigate("/admin/news")
-  }
+  };
 
   const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this article? This action cannot be undone.")) {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      navigate("/admin/news")
+    if (!confirm("Delete this news post? This is permanent.")) return;
+    try {
+      await remove(newsId);
+      navigate("/admin/news");
+    } catch (err: any) {
+      console.error("Delete failed:", err);
+      alert(err?.message || "Failed to delete news");
     }
-  }
+  };
+
+  if (loading) return <div className="p-6">Loading...</div>;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/admin/news">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to News
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Edit Article</h1>
-            <p className="text-muted-foreground">Update article content and settings</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Delete Article
-          </Button>
+      <div className="flex items-center gap-4">
+        <Link to="/admin/news">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to News
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold">Edit Article</h1>
+          <p className="text-muted-foreground">
+            Modify and update the news post
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleUpdate} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Article Details</CardTitle>
-                <CardDescription>Update article information</CardDescription>
+                <CardTitle>Article</CardTitle>
+                <CardDescription>Only backend-validated fields</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
+                <div>
                   <Label htmlFor="title">Title *</Label>
                   <Input
                     id="title"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange("title", e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="excerpt">Excerpt *</Label>
-                  <Textarea
-                    id="excerpt"
-                    value={formData.excerpt}
-                    onChange={(e) => handleInputChange("excerpt", e.target.value)}
-                    rows={3}
+                    value={form.title}
+                    onChange={(e) => handleChange("title", e.target.value)}
                     required
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category *</Label>
-                    <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category} className="capitalize">
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div>
+                    <Label htmlFor="slug">Slug *</Label>
+                    <Input
+                      id="slug"
+                      value={form.slug}
+                      onChange={(e) => handleChange("slug", e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span>Published:</span>
+                    <Button
+                      type="button"
+                      variant={form.isPublished ? "default" : "outline"}
+                      onClick={() =>
+                        handleChange("isPublished", !form.isPublished)
+                      }
+                    >
+                      {form.isPublished ? "Yes" : "No"}
+                    </Button>
                   </div>
 
-                  <div className="space-y-2">
+                  <div>
                     <Label htmlFor="publishedAt">Publication Date</Label>
                     <Input
                       id="publishedAt"
                       type="datetime-local"
-                      value={formData.publishedAt}
-                      onChange={(e) => handleInputChange("publishedAt", e.target.value)}
+                      value={form.publishedAt}
+                      onChange={(e) =>
+                        handleChange("publishedAt", e.target.value)
+                      }
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="author">Author</Label>
-                    <Input
-                      id="author"
-                      value={formData.author}
-                      onChange={(e) => handleInputChange("author", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="authorTitle">Author Title</Label>
-                    <Input
-                      id="authorTitle"
-                      value={formData.authorTitle}
-                      onChange={(e) => handleInputChange("authorTitle", e.target.value)}
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="excerpt">Excerpt</Label>
+                  <Textarea
+                    id="excerpt"
+                    value={form.excerpt}
+                    onChange={(e) => handleChange("excerpt", e.target.value)}
+                    rows={3}
+                  />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Tags</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      placeholder="Add a tag..."
-                      onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                    />
-                    <Button type="button" onClick={addTag}>
-                      Add
-                    </Button>
-                  </div>
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {tags.map((tag) => (
-                        <Badge key={tag} variant="secondary">
-                          {tag}
-                          <button
-                            type="button"
-                            onClick={() => removeTag(tag)}
-                            className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Article Content</CardTitle>
-                <CardDescription>Edit your article content sections</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {content.map((section, index) => (
-                  <div key={index} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex justify-between items-center">
-                      <Select
-                        value={section.type}
-                        onValueChange={(value: ArticleSection["type"]) =>
-                          updateContentSection(index, {
-                            type: value,
-                            content: "",
-                            items: value === "list" ? [""] : undefined,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="paragraph">Paragraph</SelectItem>
-                          <SelectItem value="heading">Heading</SelectItem>
-                          <SelectItem value="quote">Quote</SelectItem>
-                          <SelectItem value="list">List</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeContentSection(index)}
-                        disabled={content.length === 1}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {section.type === "paragraph" && (
-                      <Textarea
-                        value={section.content || ""}
-                        onChange={(e) => updateContentSection(index, { content: e.target.value })}
-                        rows={4}
-                      />
-                    )}
-
-                    {section.type === "heading" && (
-                      <Input
-                        value={section.content || ""}
-                        onChange={(e) => updateContentSection(index, { content: e.target.value })}
-                      />
-                    )}
-
-                    {section.type === "quote" && (
-                      <div className="space-y-2">
-                        <Textarea
-                          value={section.content || ""}
-                          onChange={(e) => updateContentSection(index, { content: e.target.value })}
-                          rows={3}
-                        />
-                        <Input
-                          value={section.attribution || ""}
-                          onChange={(e) => updateContentSection(index, { attribution: e.target.value })}
-                          placeholder="Attribution (optional)..."
-                        />
-                      </div>
-                    )}
-
-                    {section.type === "list" && (
-                      <div className="space-y-2">
-                        {section.items?.map((item, itemIndex) => (
-                          <div key={itemIndex} className="flex gap-2">
-                            <Input
-                              value={item}
-                              onChange={(e) => updateListItem(index, itemIndex, e.target.value)}
-                              placeholder={`List item ${itemIndex + 1}...`}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeListItem(index, itemIndex)}
-                              disabled={(section.items?.length || 0) === 1}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" onClick={() => addListItem(index)}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Item
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => addContentSection("paragraph")}>
-                    Add Paragraph
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => addContentSection("heading")}>
-                    Add Heading
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => addContentSection("quote")}>
-                    Add Quote
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => addContentSection("list")}>
-                    Add List
-                  </Button>
+                <div>
+                  <Label htmlFor="content">Content *</Label>
+                  <Textarea
+                    id="content"
+                    value={form.content}
+                    onChange={(e) => handleChange("content", e.target.value)}
+                    rows={10}
+                    required
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -406,15 +233,17 @@ export default function EditArticle() {
             <Card>
               <CardHeader>
                 <CardTitle>Featured Image</CardTitle>
-                <CardDescription>Update the featured image</CardDescription>
+                <CardDescription>
+                  Replace or remove featured image
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {featuredImage ? (
+                  {existingImageUrl ? (
                     <div className="relative">
                       <img
-                        src={URL.createObjectURL(featuredImage) || "/placeholder.svg"}
-                        alt="Featured image preview"
+                        src={existingImageUrl}
+                        alt="featured preview"
                         className="w-full aspect-video object-cover rounded-lg"
                       />
                       <Button
@@ -422,7 +251,10 @@ export default function EditArticle() {
                         variant="destructive"
                         size="icon"
                         className="absolute top-2 right-2"
-                        onClick={() => setFeaturedImage(null)}
+                        onClick={() => {
+                          setExistingImageUrl(null);
+                          setFeaturedImageFile(null);
+                        }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -431,61 +263,61 @@ export default function EditArticle() {
                     <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                       <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
                       <div className="mt-4">
-                        <Label htmlFor="featured-upload" className="cursor-pointer">
+                        <Label
+                          htmlFor="featured-upload"
+                          className="cursor-pointer"
+                        >
                           <span className="text-sm font-medium text-primary hover:text-primary/80">
                             Click to upload
                           </span>
-                          <span className="text-sm text-muted-foreground"> or drag and drop</span>
                         </Label>
                         <Input
                           id="featured-upload"
                           type="file"
                           accept="image/*"
-                          onChange={handleImageUpload}
+                          onChange={handleFile}
                           className="hidden"
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">PNG, JPG up to 10MB</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        PNG, JPG up to 10MB
+                      </p>
                     </div>
                   )}
-
-                  <div className="space-y-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="imageAlt">Alt Text</Label>
-                      <Input
-                        id="imageAlt"
-                        value={formData.imageAlt}
-                        onChange={(e) => handleInputChange("imageAlt", e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="imageCaption">Caption</Label>
-                      <Input
-                        id="imageCaption"
-                        value={formData.imageCaption}
-                        onChange={(e) => handleInputChange("imageCaption", e.target.value)}
-                      />
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="flex flex-col gap-2">
-              <Button type="submit" disabled={isSubmitting}>
-                <Save className="mr-2 h-4 w-4" />
-                {isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
-              <Button type="button" variant="outline" disabled={isSubmitting}>
-                Save as Draft
-              </Button>
-              <Button type="button" variant="ghost" asChild>
-                    <Link to="/admin/news">Cancel</Link>
-              </Button>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+                <CardDescription>Publish or delete</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Saving..." : "Save Changes"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate("/admin/news")}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDelete}
+                  >
+                    Delete Article
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </form>
     </div>
-  )
+  );
 }

@@ -27,6 +27,18 @@ const buildAuthOnlyHeader = (token: string) => ({
   Authorization: `Bearer ${token}`,
 });
 
+export async function fetchLandingNews(limit = 3): Promise<NewsPost[]> {
+  const res = await fetch(`${API_BASE}/landing?limit=${limit}`, {
+    method: "GET",
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to fetch landing news: ${res.status} ${text}`);
+  }
+  const payload = await res.json();
+  return payload.data ?? [];
+}
+
 export async function listNews(
   token?: string,
   page = 1
@@ -89,14 +101,13 @@ export async function updateNewsMultipart(
   form: FormData,
   token: string
 ): Promise<NewsPost> {
+  form.append("_method", "PUT"); // trick Laravel to treat POST as PUT
+
   const res = await fetch(`${API_BASE}/${id}`, {
-    method: "POST", // some setups use POST + _method=PUT; if your API expects PUT you can change to PUT
-    headers: buildAuthOnlyHeader(token),
+    method: "POST", // must be POST for FormData
+    headers: buildAuthOnlyHeader(token), // do NOT set Content-Type
     body: form,
   });
-
-  // If your backend expects PUT rather than POST with _method, you can instead:
-  // const res = await fetch(`${API_BASE}/${id}`, { method: "PUT", headers: buildAuthOnlyHeader(token), body: form });
 
   const data = await res.json();
   if (!res.ok || data.status === false) {
@@ -104,6 +115,7 @@ export async function updateNewsMultipart(
   }
   return data.News || data;
 }
+
 
 /**
  * Delete a news post
