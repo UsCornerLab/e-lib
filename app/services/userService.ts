@@ -26,13 +26,34 @@ export interface UsersResponse {
 }
 
 const API_BASE = "http://127.0.0.1:8000/api/users";
-const API_BASE2 =  "http://127.0.0.1:8000/api/updateProfile"
+const API_BASE2 =  "http://127.0.0.1:8000/api/updateProfile";
+const API_BASE3 = "http://127.0.0.1:8000/api/register";
 
 // Helper to build headers with JWT
 const buildHeaders = (token: string) => ({
   "Content-Type": "application/json",
   Authorization: `Bearer ${token}`,
 });
+
+export async function createUserMultipart(
+  form: FormData,
+  token: string
+): Promise<User> {
+  const res = await fetch(API_BASE3, {
+    method: "POST",
+    headers: {
+      // only send Authorization header; let browser set Content-Type with boundary
+      Authorization: `Bearer ${token}`,
+    },
+    body: form,
+  });
+  const data = await res.json();
+  if (!data.status) {
+    // backend returns message field on errors
+    throw new Error(data.message || "Failed to create user");
+  }
+  return data.user;
+}
 
 export async function listUsers(token: string): Promise<User[]> {
   const res = await fetch(API_BASE, {
@@ -54,7 +75,7 @@ export interface CreateUserPayload {
 }
 
 export async function createUser(payload: CreateUserPayload, token: string): Promise<User> {
-  const res = await fetch(API_BASE, {
+  const res = await fetch(API_BASE3, {
     method: "POST",
     headers: buildHeaders(token),
     body: JSON.stringify(payload),

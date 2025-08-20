@@ -1,28 +1,53 @@
+// app/routes/admin.news.new.tsx
+import type React from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { ArrowLeft, Upload, X, Plus, Minus } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Textarea } from "~/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Badge } from "~/components/ui/badge";
+import { Link } from "react-router";
+import type { ArticleSection } from "~/lib/news-data";
+import { useNews } from "~/hooks/useNews";
 
-import type React from "react"
-import { useState } from "react"
-import { useNavigate } from "react-router"
-import { ArrowLeft, Upload, X, Plus, Minus } from "lucide-react"
-import { Button } from "~/components/ui/button"
-import { Input } from "~/components/ui/input"
-import { Label } from "~/components/ui/label"
-import { Textarea } from "~/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select"
-import { Badge } from "~/components/ui/badge"
-import { Link } from "react-router"
-import type { ArticleSection } from "~/lib/news-data"
-
+function slugify(s: string) {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[\s\_]+/g, "-")
+    .replace(/[^a-z0-9\-]+/g, "")
+    .replace(/\-+/g, "-")
+    .replace(/^\-+|\-+$/g, "");
+}
 
 export default function NewArticle() {
-  const navigate = useNavigate()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [featuredImage, setFeaturedImage] = useState<File | null>(null)
-  const [tags, setTags] = useState<string[]>([])
-  const [newTag, setNewTag] = useState("")
+  const navigate = useNavigate();
+  const { create } = useNews();
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [featuredImage, setFeaturedImage] = useState<File | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
+    slug: "",
     excerpt: "",
     category: "",
     author: "",
@@ -30,129 +55,200 @@ export default function NewArticle() {
     publishedAt: new Date().toISOString().slice(0, 16),
     imageAlt: "",
     imageCaption: "",
-  })
+  });
 
-  const [content, setContent] = useState<ArticleSection[]>([{ type: "paragraph", content: "" }])
+  const [content, setContent] = useState<ArticleSection[]>([
+    { type: "paragraph", content: "" },
+  ]);
 
-  const categories = ["events", "announcements", "programs", "resources", "community"]
+  const categories = [
+    "events",
+    "announcements",
+    "programs",
+    "resources",
+    "community",
+  ];
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (field === "title" && !formData.slug) {
+      setFormData((prev) => ({ ...prev, slug: slugify(value) }));
+    }
+  };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file) {
-      setFeaturedImage(file)
+      setFeaturedImage(file);
     }
-  }
+  };
 
   const addTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
-      setTags([...tags, newTag.trim()])
-      setNewTag("")
+      setTags([...tags, newTag.trim()]);
+      setNewTag("");
     }
-  }
+  };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
-  }
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
 
   const addContentSection = (type: ArticleSection["type"]) => {
-    const newSection: ArticleSection = { type, content: "" }
-    if (type === "list") {
-      newSection.items = [""]
-    }
-    setContent([...content, newSection])
-  }
+    const newSection: ArticleSection = { type, content: "" };
+    if (type === "list") newSection.items = [""];
+    setContent([...content, newSection]);
+  };
 
-  const updateContentSection = (index: number, updates: Partial<ArticleSection>) => {
-    const newContent = [...content]
-    newContent[index] = { ...newContent[index], ...updates }
-    setContent(newContent)
-  }
+  const updateContentSection = (
+    index: number,
+    updates: Partial<ArticleSection>
+  ) => {
+    const newContent = [...content];
+    newContent[index] = { ...newContent[index], ...updates };
+    setContent(newContent);
+  };
 
   const removeContentSection = (index: number) => {
-    setContent(content.filter((_, i) => i !== index))
-  }
+    setContent(content.filter((_, i) => i !== index));
+  };
 
   const addListItem = (sectionIndex: number) => {
-    const newContent = [...content]
-    const section = newContent[sectionIndex]
+    const newContent = [...content];
+    const section = newContent[sectionIndex];
     if (section.type === "list" && section.items) {
-      section.items.push("")
+      section.items.push("");
     }
-    setContent(newContent)
-  }
+    setContent(newContent);
+  };
 
-  const updateListItem = (sectionIndex: number, itemIndex: number, value: string) => {
-    const newContent = [...content]
-    const section = newContent[sectionIndex]
+  const updateListItem = (
+    sectionIndex: number,
+    itemIndex: number,
+    value: string
+  ) => {
+    const newContent = [...content];
+    const section = newContent[sectionIndex];
     if (section.type === "list" && section.items) {
-      section.items[itemIndex] = value
+      section.items[itemIndex] = value;
     }
-    setContent(newContent)
-  }
+    setContent(newContent);
+  };
 
   const removeListItem = (sectionIndex: number, itemIndex: number) => {
-    const newContent = [...content]
-    const section = newContent[sectionIndex]
+    const newContent = [...content];
+    const section = newContent[sectionIndex];
     if (section.type === "list" && section.items) {
-      section.items = section.items.filter((_, i) => i !== itemIndex)
+      section.items = section.items.filter((_, i) => i !== itemIndex);
     }
-    setContent(newContent)
-  }
+    setContent(newContent);
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
+  const buildContentString = () => {
+    // We'll stringify the structured content so backend can parse or store as JSON string
+    return JSON.stringify(content);
+  };
 
-    // Calculate reading time (rough estimate: 200 words per minute)
-    const wordCount = content.reduce((count, section) => {
-      if (section.content) {
-        return count + section.content.split(" ").length
+  const validateForPublish = (isPublish: boolean) => {
+    if (!formData.title.trim()) {
+      alert("Title is required");
+      return false;
+    }
+    if (!formData.slug.trim()) {
+      alert("Slug is required");
+      return false;
+    }
+    if (
+      !content ||
+      content.length === 0 ||
+      !content.some(
+        (s) =>
+          (s.content && s.content.trim()) || (s.items && s.items.some(Boolean))
+      )
+    ) {
+      alert("Article content required");
+      return false;
+    }
+    if (isPublish && !formData.publishedAt) {
+      alert("Published date/time is required when publishing");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent, publish = true) => {
+    e.preventDefault();
+    const isPublish = publish;
+    if (!validateForPublish(isPublish)) return;
+
+    setIsSubmitting(true);
+
+    try {
+      // Prepare FormData in the shape Laravel expects
+      const fd = new FormData();
+      fd.append("title", formData.title);
+      fd.append("slug", formData.slug);
+      fd.append("excerpt", formData.excerpt || "");
+      fd.append("content", buildContentString());
+      fd.append("is_published", isPublish ? "1" : "0");
+      if (isPublish) {
+        // Laravel requires published_at when is_published is true
+        // Convert datetime-local (YYYY-MM-DDTHH:mm) to a full ISO-ish string acceptable by Laravel
+        const publishedAt = formData.publishedAt || new Date().toISOString();
+        fd.append("published_at", publishedAt);
+      } else {
+        // explicit null or omit; omit is okay
       }
-      if (section.items) {
-        return count + section.items.join(" ").split(" ").length
-      }
-      return count
-    }, 0)
-    const readingTime = Math.max(1, Math.ceil(wordCount / 200))
+      // optional fields
+      if (formData.category) fd.append("category", formData.category);
+      if (formData.author) fd.append("author", formData.author);
+      if (formData.authorTitle) fd.append("authorTitle", formData.authorTitle);
+      if (formData.imageAlt) fd.append("imageAlt", formData.imageAlt);
+      if (formData.imageCaption)
+        fd.append("imageCaption", formData.imageCaption);
+      // tags - backend doesn't validate these, but we can add them as array
+      tags.forEach((t) => fd.append("tags[]", t));
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+      if (featuredImage) fd.append("featured_image", featuredImage);
 
-    console.log("New article data:", {
-      ...formData,
-      content,
-      tags,
-      readingTime,
-      featuredImage: featuredImage?.name,
-    })
+      // call the hook create method
+      const created = await create(fd);
+      console.log("Created news:", created);
 
-    navigate("/admin/news")
-  }
+      // navigate to listing
+      navigate("/admin/news");
+    } catch (err: any) {
+      console.error("Failed to create news:", err);
+      alert(err.message || "Failed to publish article");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-          <Link to="/admin/news">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to News
-          </Link>
+        <Link to="/admin/news">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to News
+        </Link>
         <div>
           <h1 className="text-3xl font-bold">Create New Article</h1>
-          <p className="text-muted-foreground">Write and publish a new news article</p>
+          <p className="text-muted-foreground">
+            Write and publish a new news article
+          </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={(e) => handleSubmit(e, true)} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Article Details</CardTitle>
-                <CardDescription>Basic information about the article</CardDescription>
+                <CardDescription>
+                  Basic information about the article
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -166,28 +262,54 @@ export default function NewArticle() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="excerpt">Excerpt *</Label>
-                  <Textarea
-                    id="excerpt"
-                    value={formData.excerpt}
-                    onChange={(e) => handleInputChange("excerpt", e.target.value)}
-                    placeholder="Brief summary of the article..."
-                    rows={3}
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="slug">Slug *</Label>
+                    <Input
+                      id="slug"
+                      value={formData.slug}
+                      onChange={(e) =>
+                        handleInputChange("slug", slugify(e.target.value))
+                      }
+                      placeholder="auto-generated from title"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="excerpt">Excerpt *</Label>
+                    <Textarea
+                      id="excerpt"
+                      value={formData.excerpt}
+                      onChange={(e) =>
+                        handleInputChange("excerpt", e.target.value)
+                      }
+                      placeholder="Brief summary of the article..."
+                      rows={3}
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="category">Category *</Label>
-                    <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) =>
+                        handleInputChange("category", value)
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((category) => (
-                          <SelectItem key={category} value={category} className="capitalize">
+                          <SelectItem
+                            key={category}
+                            value={category}
+                            className="capitalize"
+                          >
                             {category}
                           </SelectItem>
                         ))}
@@ -201,7 +323,9 @@ export default function NewArticle() {
                       id="publishedAt"
                       type="datetime-local"
                       value={formData.publishedAt}
-                      onChange={(e) => handleInputChange("publishedAt", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("publishedAt", e.target.value)
+                      }
                     />
                   </div>
                 </div>
@@ -212,7 +336,9 @@ export default function NewArticle() {
                     <Input
                       id="author"
                       value={formData.author}
-                      onChange={(e) => handleInputChange("author", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("author", e.target.value)
+                      }
                       placeholder="Author name..."
                     />
                   </div>
@@ -222,7 +348,9 @@ export default function NewArticle() {
                     <Input
                       id="authorTitle"
                       value={formData.authorTitle}
-                      onChange={(e) => handleInputChange("authorTitle", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("authorTitle", e.target.value)
+                      }
                       placeholder="e.g., Head Librarian"
                     />
                   </div>
@@ -235,7 +363,9 @@ export default function NewArticle() {
                       value={newTag}
                       onChange={(e) => setNewTag(e.target.value)}
                       placeholder="Add a tag..."
-                      onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                      onKeyPress={(e) =>
+                        e.key === "Enter" && (e.preventDefault(), addTag())
+                      }
                     />
                     <Button type="button" onClick={addTag}>
                       Add
@@ -264,7 +394,9 @@ export default function NewArticle() {
             <Card>
               <CardHeader>
                 <CardTitle>Article Content</CardTitle>
-                <CardDescription>Build your article content with different section types</CardDescription>
+                <CardDescription>
+                  Build your article content with different section types
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {content.map((section, index) => (
@@ -304,7 +436,11 @@ export default function NewArticle() {
                     {section.type === "paragraph" && (
                       <Textarea
                         value={section.content || ""}
-                        onChange={(e) => updateContentSection(index, { content: e.target.value })}
+                        onChange={(e) =>
+                          updateContentSection(index, {
+                            content: e.target.value,
+                          })
+                        }
                         placeholder="Enter paragraph content..."
                         rows={4}
                       />
@@ -313,7 +449,11 @@ export default function NewArticle() {
                     {section.type === "heading" && (
                       <Input
                         value={section.content || ""}
-                        onChange={(e) => updateContentSection(index, { content: e.target.value })}
+                        onChange={(e) =>
+                          updateContentSection(index, {
+                            content: e.target.value,
+                          })
+                        }
                         placeholder="Enter heading text..."
                       />
                     )}
@@ -322,13 +462,21 @@ export default function NewArticle() {
                       <div className="space-y-2">
                         <Textarea
                           value={section.content || ""}
-                          onChange={(e) => updateContentSection(index, { content: e.target.value })}
+                          onChange={(e) =>
+                            updateContentSection(index, {
+                              content: e.target.value,
+                            })
+                          }
                           placeholder="Enter quote text..."
                           rows={3}
                         />
                         <Input
                           value={section.attribution || ""}
-                          onChange={(e) => updateContentSection(index, { attribution: e.target.value })}
+                          onChange={(e) =>
+                            updateContentSection(index, {
+                              attribution: e.target.value,
+                            })
+                          }
                           placeholder="Attribution (optional)..."
                         />
                       </div>
@@ -340,7 +488,9 @@ export default function NewArticle() {
                           <div key={itemIndex} className="flex gap-2">
                             <Input
                               value={item}
-                              onChange={(e) => updateListItem(index, itemIndex, e.target.value)}
+                              onChange={(e) =>
+                                updateListItem(index, itemIndex, e.target.value)
+                              }
                               placeholder={`List item ${itemIndex + 1}...`}
                             />
                             <Button
@@ -354,7 +504,12 @@ export default function NewArticle() {
                             </Button>
                           </div>
                         ))}
-                        <Button type="button" variant="outline" size="sm" onClick={() => addListItem(index)}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addListItem(index)}
+                        >
                           <Plus className="mr-2 h-4 w-4" />
                           Add Item
                         </Button>
@@ -364,16 +519,32 @@ export default function NewArticle() {
                 ))}
 
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => addContentSection("paragraph")}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => addContentSection("paragraph")}
+                  >
                     Add Paragraph
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => addContentSection("heading")}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => addContentSection("heading")}
+                  >
                     Add Heading
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => addContentSection("quote")}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => addContentSection("quote")}
+                  >
                     Add Quote
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => addContentSection("list")}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => addContentSection("list")}
+                  >
                     Add List
                   </Button>
                 </div>
@@ -385,14 +556,19 @@ export default function NewArticle() {
             <Card>
               <CardHeader>
                 <CardTitle>Featured Image</CardTitle>
-                <CardDescription>Upload a featured image for the article</CardDescription>
+                <CardDescription>
+                  Upload a featured image for the article
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {featuredImage ? (
                     <div className="relative">
                       <img
-                        src={URL.createObjectURL(featuredImage) || "/placeholder.svg"}
+                        src={
+                          URL.createObjectURL(featuredImage) ||
+                          "/placeholder.svg"
+                        }
                         alt="Featured image preview"
                         className="w-full aspect-video object-cover rounded-lg"
                       />
@@ -410,11 +586,17 @@ export default function NewArticle() {
                     <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                       <Upload className="mx-auto h-12 w-12 text-muted-foreground/50" />
                       <div className="mt-4">
-                        <Label htmlFor="featured-upload" className="cursor-pointer">
+                        <Label
+                          htmlFor="featured-upload"
+                          className="cursor-pointer"
+                        >
                           <span className="text-sm font-medium text-primary hover:text-primary/80">
                             Click to upload
                           </span>
-                          <span className="text-sm text-muted-foreground"> or drag and drop</span>
+                          <span className="text-sm text-muted-foreground">
+                            {" "}
+                            or drag and drop
+                          </span>
                         </Label>
                         <Input
                           id="featured-upload"
@@ -424,7 +606,9 @@ export default function NewArticle() {
                           className="hidden"
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">PNG, JPG up to 10MB</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        PNG, JPG up to 10MB
+                      </p>
                     </div>
                   )}
 
@@ -435,7 +619,9 @@ export default function NewArticle() {
                         <Input
                           id="imageAlt"
                           value={formData.imageAlt}
-                          onChange={(e) => handleInputChange("imageAlt", e.target.value)}
+                          onChange={(e) =>
+                            handleInputChange("imageAlt", e.target.value)
+                          }
                           placeholder="Describe the image for accessibility..."
                         />
                       </div>
@@ -444,7 +630,9 @@ export default function NewArticle() {
                         <Input
                           id="imageCaption"
                           value={formData.imageCaption}
-                          onChange={(e) => handleInputChange("imageCaption", e.target.value)}
+                          onChange={(e) =>
+                            handleInputChange("imageCaption", e.target.value)
+                          }
                           placeholder="Image caption..."
                         />
                       </div>
@@ -455,17 +643,28 @@ export default function NewArticle() {
             </Card>
 
             <div className="flex flex-col gap-2">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Publishing..." : "Publish Article"}
-              </Button>
-              <Button type="button" variant="outline" disabled={isSubmitting}>
-                Save as Draft
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={(e) => handleSubmit(e as any, true)}
+                >
+                  {isSubmitting ? "Publishing..." : "Publish Article"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting}
+                  onClick={(e) => handleSubmit(e as any, false)}
+                >
+                  Save as Draft
+                </Button>
+              </div>
               <Link to="/admin/news">Cancel</Link>
             </div>
           </div>
         </div>
       </form>
     </div>
-  )
+  );
 }
