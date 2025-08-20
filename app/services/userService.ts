@@ -10,7 +10,8 @@ export interface User {
   last_name: string;
   email: string;
   birthDate: string;
-  role: string;
+  role_id: number; 
+  role?: string;  
   address: string;
   id_photo_path: string;
   profile: string;
@@ -76,12 +77,35 @@ export interface EditUserPayload {
   id_photo_path?: File
 }
 
-export async function editUser(id: number, payload: EditUserPayload, token: string): Promise<User> {
+export async function editUser(
+  id: number, 
+  payload: EditUserPayload, 
+  token: string
+): Promise<User> {
+  const formData = new FormData();
+  
+  // Append all non-file fields
+  if (payload.first_name) formData.append('first_name', payload.first_name);
+  if (payload.last_name) formData.append('last_name', payload.last_name);
+  if (payload.email) formData.append('email', payload.email);
+  if (payload.birthDate) formData.append('birthDate', payload.birthDate);
+  if (payload.address) formData.append('address', payload.address);
+  if (payload.role) formData.append('role', payload.role);
+  if (payload.verified !== undefined) formData.append('verified', payload.verified.toString());
+  
+  // Append files if they exist
+  if (payload.profile) formData.append('profile', payload.profile);
+  if (payload.id_photo_path) formData.append('id_photo_path', payload.id_photo_path);
+
   const res = await fetch(`${API_BASE2}/${id}`, {
     method: "PUT",
-    headers: buildHeaders(token),
-    body: JSON.stringify(payload),
+    headers: {
+      Authorization: `Bearer ${token}`,
+      
+    },
+    body: formData,
   });
+  
   const data = await res.json();
   if (!data.status) throw new Error("Failed to update user");
   return data.user;

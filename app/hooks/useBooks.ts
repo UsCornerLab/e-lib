@@ -73,22 +73,23 @@ export function useBooks() {
   }, [])
 
   // Update book
-  const updateBook = useCallback(async (id: number, payload: BookPayload) => {
-    const token = getToken()
-    if (!token) throw new Error("No token found")
-    setLoading(true)
-    setError(null)
-    try {
-      const updated = await bookServices.updateBook(id, payload, token)
-      setBooks((prev) => prev.map((b) => (b.id === id ? updated : b)))
-      return updated
-    } catch (err: any) {
-      setError(err.message || "Failed to update book")
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const updateBook = useCallback(async (id: number, payload: Partial<BookPayload>) => {
+  const token = getToken()
+  if (!token) throw new Error("No token found")
+  setLoading(true)
+  setError(null)
+  try {
+    const updated = await bookServices.updateBook(id, payload, token)
+    setBooks((prev) => prev.map((b) => (b.id === id ? updated : b)))
+    return updated
+  } catch (err: any) {
+    setError(err.message || "Failed to update book")
+    throw err
+  } finally {
+    setLoading(false)
+  }
+}, [])
+
 
   // Delete book
   const deleteBook = useCallback(async (id: number) => {
