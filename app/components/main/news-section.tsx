@@ -1,57 +1,84 @@
+// src/components/NewsSection.tsx
 import { Card, CardContent, CardFooter } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Link } from "react-router";
+import { useLandingNews } from "~/hooks/useLandingNews";
+import { format } from "date-fns"; // optional - if you want to format dates (install date-fns) or use vanilla
 
-// Sample data for library news
-const newsItems = [
-  {
-    id: 1,
-    title: "Summer Reading Program Kicks Off Next Month",
-    excerpt:
-      "Join our annual summer reading program with prizes, events, and activities for all ages.",
-    date: "May 28, 2023",
-    image: "https://placehold.co/600x400",
-  },
-  {
-    id: 2,
-    title: "Library Renovation Project Completed",
-    excerpt:
-      "Our west wing renovation is complete, featuring new study rooms and improved accessibility.",
-    date: "May 15, 2023",
-    image: "https://placehold.co/600x400",
-  },
-  {
-    id: 3,
-    title: "New Digital Resources Available",
-    excerpt:
-      "We've added new e-books, audiobooks, and online learning resources to our digital collection.",
-    date: "May 10, 2023",
-    image: "https://placehold.co/600x400",
-  },
-];
+export default function NewsSection({ limit = 3 }: { limit?: number }) {
+  const { items, loading, error } = useLandingNews(limit);
 
-export default function NewsSection() {
+  const formatDate = (iso?: string | null) => {
+    if (!iso) return "";
+    try {
+      // simple formatting - you can replace with date-fns or dayjs
+      const d = new Date(iso);
+      return d.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  if (loading) {
+    // simple skeleton UI — show empty cards
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {Array.from({ length: limit }).map((_, i) => (
+          <Card key={i} className="overflow-hidden gap-0 py-0 animate-pulse">
+            <div className="relative h-40 bg-gray-200" />
+            <CardContent className="py-4">
+              <div className="h-4 w-1/3 bg-gray-200 rounded mb-2" />
+              <div className="h-4 w-full bg-gray-100 rounded mb-2" />
+              <div className="h-4 w-3/4 bg-gray-100 rounded" />
+            </CardContent>
+            <CardFooter className="flex justify-between pb-4">
+              <Button variant="outline" className="w-full" disabled>
+                Loading...
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="text-destructive">Error loading news: {error}</div>;
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {newsItems.map((item) => (
+      {items.map((item) => (
         <Card key={item.id} className="overflow-hidden gap-0 py-0">
-          <div className="relative">
+          <div className="relative h-40">
             <img
-              src={item.image || "/placeholder.svg"}
-              alt={item.title}
-              className="object-cover"
+              src={item.featured_image ?? "/placeholder.svg"}
+              alt={item.title ?? ""}
+              className="w-full h-full object-cover"
             />
           </div>
+
           <CardContent className="py-4">
             <div className="text-sm text-muted-foreground mb-2">
-              {item.date}
+              {formatDate(item.published_at)}
             </div>
             <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
-            <p className="text-muted-foreground text-sm">{item.excerpt}</p>
+            <p className="text-muted-foreground text-sm">
+              {item.excerpt ??
+                (item.content
+                  ? item.content.slice(0, 140) +
+                    (item.content.length > 140 ? "…" : "")
+                  : "")}
+            </p>
           </CardContent>
+
           <CardFooter className="flex justify-between pb-4">
             <Button variant="outline" className="w-full" asChild>
-              <Link to={`/news/${item.id}`}>Read More</Link>
+              <Link to={`/news/${item.slug ?? item.id}`}>Read More</Link>
             </Button>
           </CardFooter>
         </Card>

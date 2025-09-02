@@ -3,12 +3,13 @@ import {
   listUsers,
   createUser,
   editUser,
-
+  createUserMultipart,
   deleteUser,
   type User,
   type CreateUserPayload,
   type EditUserPayload,
 } from "../services/userService";
+
 
 export function useUsers() {
   const [users, setUsers] = useState<User[]>([]);
@@ -38,12 +39,17 @@ export function useUsers() {
   }, [token]);
 
   const addUser = useCallback(
-    async (payload: CreateUserPayload) => {
+    async (payload: CreateUserPayload | FormData) => {
       if (!token) return;
       setLoading(true);
       setError(null);
       try {
-        const newUser = await createUser(payload, token);
+        let newUser;
+        if (payload instanceof FormData) {
+          newUser = await createUserMultipart(payload, token);
+        } else {
+          newUser = await createUser(payload as CreateUserPayload, token);
+        }
         setUsers((prev) => [...prev, newUser]);
       } catch (err: any) {
         setError(err.message || "Failed to create user");

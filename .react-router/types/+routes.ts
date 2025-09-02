@@ -119,8 +119,8 @@ type RouteFiles = {
     id: "routes/admin/users/index";
     page: "/admin/users";
   };
-  "./routes/admin/users/new.tsx": {
-    id: "routes/admin/users/new";
+  "./routes/admin/users/NewUser.tsx": {
+    id: "routes/admin/users/NewUser";
     page: "/admin/users/new";
   };
   "./routes/admin/users/edit.tsx": {
